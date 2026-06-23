@@ -1,0 +1,4 @@
+run_id,commit,mode,prompt_variant,cases,pass_rate,avg_keyword_score,avg_citation_score,avg_latency_ms,total_tokens,total_cost_usd,failures
+20260623_211902,e7e1f34,offline,strict,52,0.8654,0.875,1.0,0.0,950,0.0019,7
+20260623_211921,e7e1f34,offline,strict,52,0.8654,0.875,1.0,0.0,950,0.0019,7
+20260623_211921,e7e1f34,offline,helpful,52,0.8846,0.8846,1.0,0.0,1347,0.002694,6

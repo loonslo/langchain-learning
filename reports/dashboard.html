@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>RAG / Agent 评测看板</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 32px; color: #1f2937; }
+    h1 { font-size: 28px; }
+    .grid { display: grid; grid-template-columns: repeat(4, minmax(140px, 1fr)); gap: 12px; }
+    .metric { border: 1px solid #d1d5db; border-radius: 8px; padding: 12px; }
+    .metric strong { display: block; font-size: 24px; margin-top: 6px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    th, td { border-bottom: 1px solid #e5e7eb; padding: 8px; text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>RAG / Agent 评测看板</h1>
+  <div class="grid">
+    <div class="metric">RAG 通过率<strong>0.8846</strong></div>
+    <div class="metric">平均延迟 ms<strong>0.0</strong></div>
+    <div class="metric">总成本 USD<strong>0.002694</strong></div>
+    <div class="metric">Agent 轨迹通过率<strong>0.9</strong></div>
+  </div>
+  <h2>最近评测运行</h2>
+  <table>
+    <thead><tr><th>run_id</th><th>commit</th><th>prompt</th><th>pass_rate</th><th>latency</th><th>cost</th><th>failures</th></tr></thead>
+    <tbody><tr><td>20260623_211902</td><td>e7e1f34</td><td>strict</td><td>0.8654</td><td>0.0</td><td>0.0019</td><td>7</td></tr>
+<tr><td>20260623_211921</td><td>e7e1f34</td><td>strict</td><td>0.8654</td><td>0.0</td><td>0.0019</td><td>7</td></tr>
+<tr><td>20260623_211921</td><td>e7e1f34</td><td>helpful</td><td>0.8846</td><td>0.0</td><td>0.002694</td><td>6</td></tr></tbody>
+  </table>
+</body>
+</html>

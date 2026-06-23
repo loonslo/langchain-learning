@@ -16,20 +16,17 @@ Day 15 · 向量库持久化：把 FAISS 换成 Chroma
 """
 
 import os
-from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_chroma import Chroma
+from common import get_embeddings, ZH_SEPARATORS
 
-load_dotenv()
-MODEL_PATH = r"C:\Users\so\.cache\modelscope\hub\models\BAAI\bge-small-zh-v1___5"
 PERSIST_DIR = "chroma_db"   # 向量库落盘目录，建好后会出现在当前文件夹下
 
 
 def build_or_load(file_path="test_doc.txt"):
     """有落盘目录就直接加载，没有就建库并落盘。"""
-    embeddings = HuggingFaceEmbeddings(model_name=MODEL_PATH)
+    embeddings = get_embeddings()
 
     # 关键点：第二次运行发现目录已存在，直接加载，省掉重新 embedding 的时间
     if os.path.exists(PERSIST_DIR):
@@ -41,8 +38,7 @@ def build_or_load(file_path="test_doc.txt"):
         text = f.read()
     docs = [Document(page_content=text, metadata={"source": os.path.basename(file_path)})]
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300, chunk_overlap=50,
-        separators=["\n\n", "\n", "。", "，", " ", ""],
+        chunk_size=300, chunk_overlap=50, separators=ZH_SEPARATORS,
     )
     chunks = splitter.split_documents(docs)
     # from_documents 传入 persist_directory：建库的同时自动落盘

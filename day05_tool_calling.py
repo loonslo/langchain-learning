@@ -53,23 +53,28 @@ def calculate(expression: str) -> str:
 
 # 把工具清单绑给模型。绑完后模型在回答时，可以选择"我要调用某个工具"。
 llm_with_tools = llm.bind_tools([get_weather, calculate])
-
+print(llm_with_tools)
 # ---------- 工具调用的完整两轮流程 ----------
 messages = [HumanMessage("北京天气怎么样？再帮我算 99 * 88")]
-
+print(messages)
 # 第一轮：模型不直接回答，而是返回"我要调用哪些工具、参数是什么"（tool_calls）
 response = llm_with_tools.invoke(messages)
-print("模型决定调用的工具：", response.tool_calls)
+print("模型决定调用的工具：", response)
 messages.append(response)   # 把模型这步决定也加进对话历史
-
+print(messages)
 # 你来真正执行这些工具，把结果用 ToolMessage 追加回去
 tools_map = {"get_weather": get_weather, "calculate": calculate}
 for call in response.tool_calls:
+    print('call')
+    print(call)
     result = tools_map[call["name"]].invoke(call["args"])
     messages.append(ToolMessage(content=str(result), tool_call_id=call["id"]))
+    print('message')
+    print(messages)
 
 # 第二轮：模型看到工具返回的真实结果，给出给用户的最终回答
 final = llm_with_tools.invoke(messages)
+print(final)
 print("最终回答：", final.content)
 
 

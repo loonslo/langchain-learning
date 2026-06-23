@@ -41,6 +41,7 @@ chunks = splitter.split_documents(docs)
 
 MODEL_PATH = r"C:\Users\so\.cache\modelscope\hub\models\BAAI\bge-small-zh-v1___5"
 embeddings = HuggingFaceEmbeddings(model_name=MODEL_PATH)
+# 将文档切片进行向量化，构建FAISS向量索引，封装成vectorstore
 vectorstore = FAISS.from_documents(chunks, embeddings)
 
 

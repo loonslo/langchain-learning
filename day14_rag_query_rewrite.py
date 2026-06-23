@@ -11,73 +11,64 @@ Day 14 · 查询改写：Multi-Query 与 HyDE
 知识点：
 1. MultiQueryRetriever（LangChain 内置）
 2. HyDE 的思路 + 手写实现（就几行，理解原理更重要）
+
+注意（langchain 1.x）：MultiQueryRetriever 已迁到 langchain_classic.retrievers。
 ==========================================================
 """
 
 import os
-from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import ChatOpenAI
-from langchain.retrievers.multi_query import MultiQueryRetriever
-
-load_dotenv()
-MODEL_PATH = r"C:\Users\so\.cache\modelscope\hub\models\BAAI\bge-small-zh-v1___5"
-
-# ---------- 建库 ----------
-with open("test_doc.txt", encoding="utf-8") as f:
-    text = f.read()
-docs = [Document(page_content=text, metadata={"source": "test_doc.txt"})]
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=120, chunk_overlap=20,
-    separators=["\n\n", "\n", "。", "，", " ", ""],
-)
-chunks = splitter.split_documents(docs)
-embeddings = HuggingFaceEmbeddings(model_name=MODEL_PATH)
-vectorstore = FAISS.from_documents(chunks, embeddings)
-base_ret = vectorstore.as_retriever(search_kwargs={"k": 3})
-
-llm = ChatOpenAI(
-    model="deepseek-chat",
-    api_key=os.getenv("DEEPSEEK_API_KEY"),
-    base_url="https://api.deepseek.com",
-)
-
-query = "向量怎么存"
+from langchain_classic.retrievers import MultiQueryRetriever
+from common import get_embeddings, get_llm, ZH_SEPARATORS
 
 
-# ---------- 方法一：Multi-Query ----------
-# MultiQueryRetriever 会让 llm 把原问题改写成多条（如"如何存储向量""向量持久化方式"），
-# 各自检索后把结果去重合并，召回更全。
-multi_ret = MultiQueryRetriever.from_llm(retriever=base_ret, llm=llm)
-
-print("【原始问题直接检索】")
-for d in base_ret.invoke(query):
-    print(" -", d.page_content[:40])
-
-print("\n【Multi-Query 改写后检索】")
-for d in multi_ret.invoke(query):
-    print(" -", d.page_content[:40])
+def build_base_retriever(path="test_doc.txt"):
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    docs = [Document(page_content=text, metadata={"source": os.path.basename(path)})]
+    chunks = RecursiveCharacterTextSplitter(
+        chunk_size=120, chunk_overlap=20, separators=ZH_SEPARATORS,
+    ).split_documents(docs)
+    vectorstore = FAISS.from_documents(chunks, get_embeddings())
+    return vectorstore.as_retriever(search_kwargs={"k": 3})
 
 
-# ---------- 方法二：HyDE（手写，理解原理）----------
-# 先让 llm 对问题"瞎答"一个假设答案（哪怕不准），再用这个答案去检索。
-# 因为答案的措辞更像文档正文，往往比原始短问题更容易命中相关块。
-hyde_prompt = ChatPromptTemplate.from_template(
-    "请用两三句话假设性地回答下面的问题（不确定也照写，用于检索）：\n{question}"
-)
-hyde_chain = hyde_prompt | llm | StrOutputParser()
+if __name__ == "__main__":
+    base_ret = build_base_retriever()
+    llm = get_llm(temperature=0)   # 改写要稳定，temperature=0
+    query = "向量怎么存"
 
-hypo_answer = hyde_chain.invoke({"question": query})
-print(f"\n【HyDE 生成的假设答案】\n{hypo_answer}")
+    # ---------- 方法一：Multi-Query ----------
+    # MultiQueryRetriever 让 llm 把原问题改写成多条（如"如何存储向量""向量持久化方式"），
+    # 各自检索后把结果去重合并，召回更全。
+    multi_ret = MultiQueryRetriever.from_llm(retriever=base_ret, llm=llm)
 
-print("\n【用假设答案去检索】")
-for d in base_ret.invoke(hypo_answer):
-    print(" -", d.page_content[:40])
+    print("【原始问题直接检索】")
+    for d in base_ret.invoke(query):
+        print(" -", d.page_content[:40])
+
+    print("\n【Multi-Query 改写后检索】")
+    for d in multi_ret.invoke(query):
+        print(" -", d.page_content[:40])
+
+    # ---------- 方法二：HyDE（手写，理解原理）----------
+    # 先让 llm 对问题"瞎答"一个假设答案（哪怕不准），再用这个答案去检索。
+    # 因为答案的措辞更像文档正文，往往比原始短问题更容易命中相关块。
+    hyde_prompt = ChatPromptTemplate.from_template(
+        "请用两三句话假设性地回答下面的问题（不确定也照写，用于检索）：\n{question}"
+    )
+    hyde_chain = hyde_prompt | llm | StrOutputParser()
+
+    hypo_answer = hyde_chain.invoke({"question": query})
+    print(f"\n【HyDE 生成的假设答案】\n{hypo_answer}")
+
+    print("\n【用假设答案去检索】")
+    for d in base_ret.invoke(hypo_answer):
+        print(" -", d.page_content[:40])
 
 
 # ----------------------------------------------------------
@@ -88,6 +79,5 @@ for d in base_ret.invoke(hypo_answer):
 #
 # 提醒：这些都会增加 LLM 调用次数（更慢更贵），要按效果权衡是否开启。
 #
-# 动手练习：故意问一个很口语、很短的问题，对比三种方式（原始/Multi-Query/HyDE）
-#          的召回差异
+# 动手练习：故意问一个很口语、很短的问题，对比三种方式（原始/Multi-Query/HyDE）的召回差异
 # ----------------------------------------------------------

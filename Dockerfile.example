@@ -1,0 +1,17 @@
+# 基础镜像：带 Python 的精简版
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# 先装依赖（单独一层，依赖没变时能用缓存，构建更快）
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 再拷代码
+COPY . .
+
+# 服务监听端口
+EXPOSE 8000
+
+# 启动 Day35 的 FastAPI 服务
+CMD ["uvicorn", "day35_serve_fastapi:app", "--host", "0.0.0.0", "--port", "8000"]
