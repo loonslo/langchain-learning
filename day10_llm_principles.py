@@ -36,7 +36,7 @@ print(f"字符数：{len(text)}，粗略 token 估算：约 {int(len(text) * 1.5
 # 把词变成向量，算余弦相似度：语义越近，值越高。这就是 RAG 检索的底层原理（Day8 用过）。
 emb = HuggingFaceEmbeddings(model_name=MODEL_PATH)
 
-
+# 余弦相似度, 取值范围 [0, 1], 越接近 1，越相似
 def cosine(a, b):
     a, b = np.array(a), np.array(b)
     return a @ b / (np.linalg.norm(a) * np.linalg.norm(b))

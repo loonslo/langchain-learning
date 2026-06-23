@@ -13,62 +13,58 @@ BM25 是经典的关键词检索，正好和向量互补。这节把两者合起
 3. 为什么专有名词向量召回差、混合怎么救
 
 依赖：pip install rank_bm25
+注意（langchain 1.x）：EnsembleRetriever 已从 langchain.retrievers 迁到 langchain_classic.retrievers。
 ==========================================================
 """
 
 import os
-from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_community.retrievers import BM25Retriever
-from langchain.retrievers import EnsembleRetriever
-
-load_dotenv()
-MODEL_PATH = r"C:\Users\so\.cache\modelscope\hub\models\BAAI\bge-small-zh-v1___5"
-
-# ---------- 建库（沿用前几天）----------
-with open("test_doc.txt", encoding="utf-8") as f:
-    text = f.read()
-docs = [Document(page_content=text, metadata={"source": "test_doc.txt"})]
-splitter = RecursiveCharacterTextSplitter(
-    chunk_size=120, chunk_overlap=20,
-    separators=["\n\n", "\n", "。", "，", " ", ""],
-)
-chunks = splitter.split_documents(docs)
-
-embeddings = HuggingFaceEmbeddings(model_name=MODEL_PATH)
-vectorstore = FAISS.from_documents(chunks, embeddings)
+from langchain_classic.retrievers import EnsembleRetriever
+from common import get_embeddings, ZH_SEPARATORS
 
 
-# ---------- 三种检索器 ----------
-# 1) 向量检索：靠语义相似度
-vector_ret = vectorstore.as_retriever(search_kwargs={"k": 4})
+def build_retrievers(path="test_doc.txt"):
+    """建三种检索器：纯向量、纯 BM25、混合。返回 (向量, 混合) 供对比。"""
+    with open(path, encoding="utf-8") as f:
+        text = f.read()
+    docs = [Document(page_content=text, metadata={"source": os.path.basename(path)})]
+    chunks = RecursiveCharacterTextSplitter(
+        chunk_size=120, chunk_overlap=20, separators=ZH_SEPARATORS,
+    ).split_documents(docs)
 
-# 2) BM25 检索：靠关键词匹配，直接从 chunks 构建，不需要 embedding
-bm25_ret = BM25Retriever.from_documents(chunks)
-bm25_ret.k = 4
+    embeddings = get_embeddings()
+    vectorstore = FAISS.from_documents(chunks, embeddings)
 
-# 3) 混合检索：EnsembleRetriever 把两者结果按权重融合
-#    weights=[0.5, 0.5] 表示两者各占一半，可按场景调（专有名词多就给 BM25 高一点）
-hybrid_ret = EnsembleRetriever(
-    retrievers=[vector_ret, bm25_ret],
-    weights=[0.5, 0.5],
-)
+    # 1) 向量检索：靠语义相似度
+    vector_ret = vectorstore.as_retriever(search_kwargs={"k": 4})
+
+    # 2) BM25 检索：靠关键词匹配，直接从 chunks 构建，不需要 embedding
+    bm25_ret = BM25Retriever.from_documents(chunks)
+    bm25_ret.k = 4
+
+    # 3) 混合检索：EnsembleRetriever 把两者结果按权重融合
+    #    weights=[0.5, 0.5] 表示两者各占一半，可按场景调（专有名词多就给 BM25 高一点）
+    hybrid_ret = EnsembleRetriever(retrievers=[vector_ret, bm25_ret], weights=[0.5, 0.5])
+    return vector_ret, hybrid_ret
 
 
-# ---------- 对比：含专有名词的查询，纯向量 vs 混合 ----------
-query = "FAISS 有什么作用"
-print(f"查询：{query}\n")
+if __name__ == "__main__":
+    vector_ret, hybrid_ret = build_retrievers()
 
-print("【纯向量检索】")
-for d in vector_ret.invoke(query):
-    print(" -", d.page_content[:40])
+    # 对比：含专有名词的查询，纯向量 vs 混合
+    query = "FAISS 有什么作用"
+    print(f"查询：{query}\n")
 
-print("\n【混合检索（向量 + BM25）】")
-for d in hybrid_ret.invoke(query):
-    print(" -", d.page_content[:40])
+    print("【纯向量检索】")
+    for d in vector_ret.invoke(query):
+        print(" -", d.page_content[:40])
+
+    print("\n【混合检索（向量 + BM25）】")
+    for d in hybrid_ret.invoke(query):
+        print(" -", d.page_content[:40])
 
 
 # ----------------------------------------------------------

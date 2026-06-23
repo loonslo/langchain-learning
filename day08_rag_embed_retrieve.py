@@ -57,12 +57,17 @@ vectorstore = FAISS.from_documents(chunks, embeddings)
 
 # similarity_search(问题, k)：把问题也转成向量，找出最相似的 k 个块。
 # 关键点：它比的是"语义"而非"关键词"——问"怎么存向量"也能命中讲 FAISS 的块。
-for query in ["RAG 是什么", "LangGraph 有什么用", "怎么存储向量"]:
-    print(f"========== 查询：{query} ==========")
-    results = vectorstore.similarity_search(query, k=3)
-    for i, doc in enumerate(results, 1):
-        print(f"[{i}] {doc.page_content}")
-    print()
+results = vectorstore.similarity_search("RAG 是什么", k=3)
+print(f"========== 搜索结果 ==========")
+print(results)
+print(results[0].page_content)
+
+# for query in ["RAG 是什么", "LangGraph 有什么用", "怎么存储向量"]:
+#     print(f"========== 查询：{query} ==========")
+#     results = vectorstore.similarity_search(query, k=3)
+#     for i, doc in enumerate(results, 1):
+#         print(f"[{i}] {doc.page_content}")
+#     print()
 
 
 # ----------------------------------------------------------

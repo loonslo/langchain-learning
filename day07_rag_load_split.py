@@ -47,6 +47,7 @@ splitter = RecursiveCharacterTextSplitter(
 
 chunks = splitter.split_documents(docs)
 print(f"切成了 {len(chunks)} 块：\n")
+print(chunks)
 for i, chunk in enumerate(chunks, 1):
     print(f"--- 块 {i}（{len(chunk.page_content)} 字）---")
     print(chunk.page_content)

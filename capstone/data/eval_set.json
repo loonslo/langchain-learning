@@ -1,0 +1,8 @@
+[
+  {"id": "f01", "question": "RAG 的全称是什么？", "keywords": ["检索", "生成"], "should_refuse": false},
+  {"id": "f02", "question": "常见的向量数据库有哪些？", "keywords": ["FAISS"], "should_refuse": false},
+  {"id": "f03", "question": "LangGraph 用什么结构描述流程？", "keywords": ["图"], "should_refuse": false},
+  {"id": "m01", "question": "RAG 为什么能减少幻觉？", "keywords": ["检索"], "should_refuse": false},
+  {"id": "r01", "question": "LangChain 是哪一年发布的？", "keywords": [], "should_refuse": true},
+  {"id": "r02", "question": "FAISS 是哪家公司开发的？", "keywords": [], "should_refuse": true}
+]

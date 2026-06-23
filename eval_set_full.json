@@ -1,0 +1,261 @@
+[
+  {
+    "id": "f01",
+    "question": "LangChain 是什么？",
+    "reference": "用于开发大语言模型应用的框架",
+    "keywords": [
+      "框架"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f02",
+    "question": "RAG 的全称是什么？",
+    "reference": "检索增强生成",
+    "keywords": [
+      "检索",
+      "生成"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f03",
+    "question": "Chain 是做什么的？",
+    "reference": "把多个步骤串联起来的流程",
+    "keywords": [
+      "步骤"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f04",
+    "question": "Agent 的作用是什么？",
+    "reference": "让模型自主决定调用哪些工具来完成任务",
+    "keywords": [
+      "工具"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f05",
+    "question": "LangGraph 是谁推出的？",
+    "reference": "LangChain 团队",
+    "keywords": [
+      "LangChain"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f06",
+    "question": "LangGraph 用什么结构描述执行流程？",
+    "reference": "图结构，节点代表操作、边代表流转方向",
+    "keywords": [
+      "图"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f07",
+    "question": "常见的向量数据库有哪些？",
+    "reference": "FAISS、Chroma、Pinecone",
+    "keywords": [
+      "FAISS"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f08",
+    "question": "向量数据库的作用是什么？",
+    "reference": "把文本转成向量存储，并支持相似度检索",
+    "keywords": [
+      "向量",
+      "检索"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f09",
+    "question": "LangChain 的三大核心概念是什么？",
+    "reference": "Chain、Agent、RAG",
+    "keywords": [
+      "Chain",
+      "Agent",
+      "RAG"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "f10",
+    "question": "LangGraph 支持哪两种控制流？",
+    "reference": "条件分支和循环",
+    "keywords": [
+      "循环"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "fact",
+    "should_refuse": false
+  },
+  {
+    "id": "m01",
+    "question": "RAG 为什么能减少幻觉？",
+    "reference": "因为先检索相关文档片段，再让模型基于这些片段回答，而不是凭空生成",
+    "keywords": [
+      "检索"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "multi_hop",
+    "should_refuse": false
+  },
+  {
+    "id": "m02",
+    "question": "RAG 和向量数据库是什么关系？",
+    "reference": "向量数据库是 RAG 的核心组件，负责存向量并做相似度检索，供 RAG 检索阶段使用",
+    "keywords": [
+      "向量"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "multi_hop",
+    "should_refuse": false
+  },
+  {
+    "id": "m03",
+    "question": "LangGraph 和 LangChain 是什么关系，前者解决什么？",
+    "reference": "LangGraph 是 LangChain 团队的扩展框架，用图结构构建有状态、可循环的 Agent 流程",
+    "keywords": [
+      "图"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "multi_hop",
+    "should_refuse": false
+  },
+  {
+    "id": "m04",
+    "question": "一个 RAG 系统回答问题大致经过哪几步？",
+    "reference": "先把文本向量化存进向量库，提问时检索相关片段，再让模型基于片段生成回答",
+    "keywords": [
+      "检索"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "multi_hop",
+    "should_refuse": false
+  },
+  {
+    "id": "m05",
+    "question": "Agent 和 Chain 有什么区别？",
+    "reference": "Chain 是固定串联的步骤流程；Agent 能自主决定调用哪些工具，更灵活",
+    "keywords": [
+      "工具"
+    ],
+    "expect_source": "test_doc.txt",
+    "type": "multi_hop",
+    "should_refuse": false
+  },
+  {
+    "id": "r01",
+    "question": "LangChain 是哪一年发布的？",
+    "reference": "文档未提及，应拒答",
+    "keywords": [],
+    "expect_source": null,
+    "type": "refuse",
+    "should_refuse": true
+  },
+  {
+    "id": "r02",
+    "question": "FAISS 是哪家公司开发的？",
+    "reference": "文档未提及，应拒答",
+    "keywords": [],
+    "expect_source": null,
+    "type": "refuse",
+    "should_refuse": true
+  },
+  {
+    "id": "r03",
+    "question": "LangGraph 支持 Java 吗？",
+    "reference": "文档未提及，应拒答",
+    "keywords": [],
+    "expect_source": null,
+    "type": "refuse",
+    "should_refuse": true
+  },
+  {
+    "id": "r04",
+    "question": "Pinecone 的定价是多少？",
+    "reference": "文档未提及，应拒答",
+    "keywords": [],
+    "expect_source": null,
+    "type": "refuse",
+    "should_refuse": true
+  },
+  {
+    "id": "r05",
+    "question": "RAG 和微调哪个准确率更高？",
+    "reference": "文档未提及，应拒答",
+    "keywords": [],
+    "expect_source": null,
+    "type": "refuse",
+    "should_refuse": true
+  },
+  {
+    "id": "r06",
+    "question": "这份文档的作者是谁？",
+    "reference": "文档未提及，应拒答",
+    "keywords": [],
+    "expect_source": null,
+    "type": "refuse",
+    "should_refuse": true
+  },
+  {
+    "id": "r07",
+    "question": "Chroma 最大能存多少条向量？",
+    "reference": "文档未提及，应拒答",
+    "keywords": [],
+    "expect_source": null,
+    "type": "refuse",
+    "should_refuse": true
+  },
+  {
+    "id": "r08",
+    "question": "Agent 默认用什么大模型？",
+    "reference": "文档未提及，应拒答",
+    "keywords": [],
+    "expect_source": null,
+    "type": "refuse",
+    "should_refuse": true
+  },
+  {
+    "id": "c01",
+    "question": "关于向量数据库的说明出自文档哪部分？",
+    "reference": "出自讲向量数据库的段落（提到 FAISS、Chroma、Pinecone 那段）",
+    "keywords": [],
+    "expect_source": "test_doc.txt",
+    "type": "citation",
+    "should_refuse": false
+  },
+  {
+    "id": "c02",
+    "question": "请回答 LangGraph 的核心并说明依据来自哪里。",
+    "reference": "核心是用图结构描述流程，依据来自讲 LangGraph 的段落",
+    "keywords": [],
+    "expect_source": "test_doc.txt",
+    "type": "citation",
+    "should_refuse": false
+  }
+]

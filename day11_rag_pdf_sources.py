@@ -13,22 +13,18 @@ Day9 的最小 RAG 只能读一个 txt，写法是平铺的。真实场景里文
    （修掉最小 RAG 常见的"过度拒答"：明明检索到了相关内容却说不知道）
 
 知识点：metadata 溯源、prompt 措辞对"拒答 vs 过度拒答"的影响、模块化封装
+（模型路径 / LLM 初始化已抽到 common.py，换机器只改那一处）
 ==========================================================
 """
 
 import os
-from dotenv import load_dotenv
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain_core.runnables import RunnablePassthrough
 from langchain_core.output_parsers import StrOutputParser
-from langchain_openai import ChatOpenAI
-
-load_dotenv()
-MODEL_PATH = r"C:\Users\so\.cache\modelscope\hub\models\BAAI\bge-small-zh-v1___5"
+from common import get_embeddings, get_llm, ZH_SEPARATORS
 
 
 def load_document(file_path: str) -> list[Document]:
@@ -62,24 +58,22 @@ def build_retriever(file_path: str):
         raise ValueError("没解析出任何文本（PDF 可能是扫描件，没有文字层）")
 
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size=300, chunk_overlap=50,
-        separators=["\n\n", "\n", "。", "，", " ", ""],
+        chunk_size=300, chunk_overlap=50, separators=ZH_SEPARATORS,
     )
     chunks = splitter.split_documents(docs)   # 切割会自动把 metadata 带到每个块上
     print(f"共切成 {len(chunks)} 块")
 
-    embeddings = HuggingFaceEmbeddings(model_name=MODEL_PATH)
+    embeddings = get_embeddings()
     vectorstore = FAISS.from_documents(chunks, embeddings)
     return vectorstore.as_retriever(search_kwargs={"k": 4})
 
 
-def build_rag_chain(retriever):
-    """组装 RAG 链。prompt 措辞经过改进，避免'过度拒答'。"""
-    llm = ChatOpenAI(
-        model="deepseek-chat",
-        api_key=os.getenv("DEEPSEEK_API_KEY"),
-        base_url="https://api.deepseek.com",
-    )
+def build_rag_chain(retriever, temperature: float = 0.0):
+    """组装 RAG 链。prompt 措辞经过改进，避免'过度拒答'。
+
+    temperature 默认 0：这条链后面要被 day17/18/22 当"被测对象"反复跑，
+    必须可复现——同一个问题每次答得一样，回归测试才有意义。"""
+    llm = get_llm(temperature=temperature)
 
     def format_docs(docs):
         # 把来源信息一并拼进上下文，模型才有依据标出处
@@ -94,15 +88,16 @@ def build_rag_chain(retriever):
     # 对比 Day9："没答案就说不知道"太严，会把"部分相关"也拒掉。
     # 这里改成：有部分信息就基于它尽量答并标来源，完全无关才拒答。
     prompt = ChatPromptTemplate.from_template("""
-你是严谨的知识库助手。请依据下面的上下文回答问题：
-- 只要有相关信息（哪怕只是部分），就基于它尽量回答，并在结尾用【来源】标注出处；
-- 只有完全没有相关信息时，才回答"文档中没有提到"。
-
-上下文：
-{context}
-
-问题：{question}
-""")
+        你是严谨的知识库助手。请依据下面的上下文回答问题：
+        - 只要有相关信息（哪怕只是部分），就基于它尽量回答，并在结尾用【来源】标注出处；
+        - 只有完全没有相关信息时，才回答"文档中没有提到"。
+        
+        上下文：
+        {context}
+        
+        问题：
+        {question}
+        """)
 
     return (
         {"context": retriever | format_docs, "question": RunnablePassthrough()}
@@ -127,10 +122,8 @@ if __name__ == "__main__":
 # - 真实 RAG 要能处理 PDF、能溯源、封装好便于复用和测试
 # - metadata（来源/页码）跟着 chunk 一路带到回答里，是"可信问答"的基础
 # - prompt 措辞直接影响"拒答 vs 过度拒答"，是 RAG 调优里最便宜的旋钮
+# - build_rag_chain 默认 temperature=0：被评测反复调用时结果可复现
 #
 # 动手练习：找一份带页码的真实 PDF（产品手册/合同），问一个跨页的问题，
 #          看回答能不能正确标出"第几页"。
-#
-# 下一步（Day11+）：检索质量进阶（Chroma 持久化、混合检索、查询改写），
-#   再往后进 RAG 评测——量化幻觉率/拒答率，正是测试背景的护城河。
 # ----------------------------------------------------------
