@@ -1,0 +1,51 @@
+name: eval-gate   # CI 评测门禁（Day58）：每个 PR 跑 pytest + 评测，跌破阈值就拦 merge
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  quality-gate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps
+        run: |
+          python -m pip install --upgrade pip
+          # 真实模型/embedding 在 CI 里用环境变量注入；这里装最小依赖
+          pip install pytest langchain langchain-core langchain-community \
+                      langchain-chroma langchain-text-splitters rank_bm25 \
+                      langchain-huggingface langchain-openai python-dotenv pypdf
+
+      - name: Run pytest regression
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          EMBED_MODEL_PATH: ${{ secrets.EMBED_MODEL_PATH }}
+        run: |
+          pytest capstone/test_regression.py -v
+
+      - name: Run eval gate (block merge if quality drops)
+        env:
+          DEEPSEEK_API_KEY: ${{ secrets.DEEPSEEK_API_KEY }}
+          EMBED_MODEL_PATH: ${{ secrets.EMBED_MODEL_PATH }}
+        working-directory: capstone
+        run: |
+          # ci_gate.py 跌破阈值会 exit 1 → 整个 job 失败 → PR 被拦
+          python ci_gate.py
+
+      - name: Upload eval report
+        if: always()           # 不管过没过都把报告传上去，方便 PR 里看
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-report
+          path: |
+            capstone/data/eval_report.md
+            capstone/data/failures.json
