@@ -1,17 +1,22 @@
 # 企业知识库 Agent + 自动化评测平台（毕业项目）
 
-> 测试工程师转 AI 应用开发的整合作品。把 day01–44 学到的能力串成一个能跑、能测、能上线的项目。
+> 测试工程师转 AI 应用开发的整合作品。把 day01–66 学到的能力串成一个能跑、能测、能上线的项目。
 > 差异化定位：不是又一个"聊天框 demo"，而是**带评测、可回归、可观测**的知识库 Agent——这正是测试背景的护城河。
 
 ## 能力一览
 
 | 模块 | 文件 | 整合自 |
 |------|------|--------|
-| 文档处理 + 混合检索 + 溯源 | `knowledge_base.py` | day11–16 |
-| Agent 层（知识库工具 + HITL 审批） | `agent.py` | day25–34 |
-| 自动化评测（指标 + 报告 + 失败库） | `evaluation.py` | day17–22 |
-| HTTP 服务 + SQLite 落库 | `api.py` | day35/38/39 |
-| pytest 回归 | `test_regression.py` | day42 |
+| 文档处理 + 混合检索 + 溯源 | `knowledge_base.py` | day12–17 |
+| 真实数据接入 + 增量同步 | `connector.py` | day54 |
+| 文档级权限过滤（检索层） | `permissions.py` | day55 |
+| 认证 + 多租户 + 限流 | `auth.py` | day56 |
+| Agent 层（知识库工具 + HITL 审批） | `agent.py` | day28–36 |
+| 自动化评测（指标 + 报告 + 失败库） | `evaluation.py` | day18–27 |
+| CI 评测门禁 | `ci_gate.py` | day58 |
+| 生产监控（p95/p99 + 成本） | `monitoring.py` | day62 |
+| HTTP 服务（基础 / 企业版） | `api.py` / `api_enterprise.py` | day41/44/45/56 |
+| pytest 回归 | `test_regression.py` | day48 |
 | Web 界面（演示） | `app_streamlit.py` | — |
 | CLI 入口 | `main.py` | — |
 
