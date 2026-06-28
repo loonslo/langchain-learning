@@ -26,7 +26,7 @@ from common import get_embeddings, ZH_SEPARATORS
 STRATEGIES = [
     {"name": "小块 + 无重叠", "chunk_size": 50, "chunk_overlap": 0},
     {"name": "小块 + 有重叠", "chunk_size": 50, "chunk_overlap": 20},
-    {"name": "大块 + 有重叠", "chunk_size": 200, "chunk_overlap": 30},
+    {"name": "大块 + 有重叠", "chunk_size": 500, "chunk_overlap": 30},
 ]
 
 QUERY = "RAG 为什么能减少幻觉"  # 答案横跨"检索相关文档→基于片段回答"两小句，最考验切割
