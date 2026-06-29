@@ -26,7 +26,7 @@ RAG、Agent、LangChain / LangGraph、Tool Calling、Prompt Engineering、Contex
 
 ## 作品集策略（非科班补偿）
 
-- 多个 GitHub 项目 + 自媒体技术输出当公开作品集。
+- 多个 GitHub 项目 + 项目文档 / 复盘记录当公开作品集。
 - 主打作品：把"RAG 评测平台"单独做成一个项目（对应真实存在的"模型评估工程师"岗位）。
 
 ## 不要踩的坑

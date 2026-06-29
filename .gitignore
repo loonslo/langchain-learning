@@ -2,5 +2,16 @@
 __pycache__/
 *.pyc
 .idea/
+.venv/
 chat_*.txt
 *.pdf
+*.db
+output/
+.claude/
+.agents/
+gpt2/
+txt/
+reports/*.csv
+reports/*.json
+reports/*.html
+reports/latest_report.md
