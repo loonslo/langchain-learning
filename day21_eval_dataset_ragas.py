@@ -11,7 +11,7 @@ Day 21 · 造评测集（下）+ RAGAS 离线评估
    answer_relevancy(答案相关性)、context_precision(上下文精度) 等分数。
 
 合并产物 eval_set_full.json 是整条评测线的"单一数据源"：
-day17（手写指标）、day18（LLM 裁判）、day22（报告）都读它，不再各写一套。
+day18（手写指标）、day19（LLM 裁判）、day22（报告）都读它，不再各写一套。
 
 知识点：
 1. 拒答题怎么造、为什么重要
@@ -60,9 +60,9 @@ def load_or_build_full_set() -> list[dict]:
     """合并 Day19 的基础集 + 本节补充集，写出 eval_set_full.json（评测线单一数据源）。"""
     base = Path("eval_set.json")
     if not base.exists():
-        raise FileNotFoundError("先跑 day19_eval_dataset_build.py 生成 eval_set.json")
-    day19 = json.loads(base.read_text(encoding="utf-8"))
-    full = day19 + EXTRA
+        raise FileNotFoundError("先跑 day20_eval_dataset_build.py 生成 eval_set.json")
+    base_cases = json.loads(base.read_text(encoding="utf-8"))
+    full = base_cases + EXTRA
     Path("eval_set_full.json").write_text(
         json.dumps(full, ensure_ascii=False, indent=2), encoding="utf-8")
     return full
@@ -76,7 +76,7 @@ def run_ragas(dataset: list[dict]):
     from ragas.llms import LangchainLLMWrapper
     from ragas.embeddings import LangchainEmbeddingsWrapper
     from common import get_llm, get_embeddings
-    from day11_rag_pdf_sources import build_retriever, build_rag_chain
+    from day12_rag_pdf_sources import build_retriever, build_rag_chain
 
     retriever = build_retriever("test_doc.txt")
     rag_chain = build_rag_chain(retriever)   # temperature=0，结果可复现
@@ -109,7 +109,7 @@ if __name__ == "__main__":
     full = load_or_build_full_set()
     n = {t: sum(r["type"] == t for r in full) for t in ("fact", "multi_hop", "refuse", "citation")}
     print(f"评测集合并完成，共 {len(full)} 条：{n}")
-    print(f"  已写出 eval_set_full.json（day17/18/22 都读它）")
+    print(f"  已写出 eval_set_full.json（day18/19/22 都读它）")
     print(f"  其中拒答题 {n['refuse']} 条（防幻觉底线）\n")
 
     try:
@@ -120,7 +120,7 @@ if __name__ == "__main__":
 
 # ----------------------------------------------------------
 # 小结：
-# - 拒答题专测"防幻觉"：文档没有就该说不知道，硬答=幻觉。这类题用 day17 的
+# - 拒答题专测"防幻觉"：文档没有就该说不知道，硬答=幻觉。这类题用 day18 的
 #   "拒答正确率"指标算，不进 RAGAS（RAGAS 评的是有答案时的质量）。
 # - RAGAS 三个常用指标：
 #     faithfulness     答案有没有忠于检索到的上下文（防编造）
