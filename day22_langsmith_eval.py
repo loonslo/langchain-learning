@@ -30,7 +30,7 @@ if HAS_KEY:
 
 import json
 from pathlib import Path
-from day11_rag_pdf_sources import build_retriever, build_rag_chain
+from day12_rag_pdf_sources import build_retriever, build_rag_chain
 
 
 def trace_demo():
