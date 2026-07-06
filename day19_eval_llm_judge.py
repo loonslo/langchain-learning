@@ -20,7 +20,7 @@ from pathlib import Path
 from pydantic import BaseModel, Field
 from langchain_core.prompts import ChatPromptTemplate
 from common import get_llm
-from day11_rag_pdf_sources import build_retriever, build_rag_chain
+from day12_rag_pdf_sources import build_retriever, build_rag_chain
 
 
 class Verdict(BaseModel):
