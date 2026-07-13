@@ -1,0 +1,16 @@
+Traceback (most recent call last):
+  File "<frozen runpy>", line 198, in _run_module_as_main
+  File "<frozen runpy>", line 88, in _run_code
+  File "D:\workspace\langchain-learning\evals\run_eval_platform.py", line 249, in <module>
+    print(json.dumps(run(args.mode, args.prompt), ensure_ascii=False, indent=2))
+                     ~~~^^^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\workspace\langchain-learning\evals\run_eval_platform.py", line 165, in run
+    answer, retrieval_context = live_answer(case, prompt_variant)
+                                ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^
+  File "D:\workspace\langchain-learning\evals\run_eval_platform.py", line 96, in live_answer
+    retriever = _get_retriever()
+  File "D:\workspace\langchain-learning\evals\run_eval_platform.py", line 67, in _get_retriever
+    from day12_rag_pdf_sources import build_retriever
+  File "D:\workspace\langchain-learning\day12_rag_pdf_sources.py", line 21, in <module>
+    from langchain_core.documents import Document
+ModuleNotFoundError: No module named 'langchain_core'

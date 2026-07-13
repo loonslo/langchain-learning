@@ -24,7 +24,7 @@ capstone/                        # Graduation project: enterprise knowledge base
 evals/                           # Standalone evaluation platform module
   run_eval_platform.py           #   Quality + cost + latency + failure analysis + regression history
   dashboard.py                   #   Generates reports/dashboard.html
-  prompt_ab_judge_agreement.py   #   Prompt A/B testing with judge consistency
+  prompt_ab_judge_agreement.py   #   Compatibility entry; Day24 implementation lives in day24_prompt_ab_judge.py
   agent_trajectory_eval.py       #   Agent trajectory evaluation
 reports/                         # Generated outputs: eval_runs.csv, failures.json, latest_report.md, dashboard.html
 ```
@@ -41,7 +41,7 @@ python dayNN_filename.py         # Run any day's file directly
 python -m evals.run_eval_platform                    # Offline mode (demo answers)
 python -m evals.run_eval_platform --mode live        # Live mode (requires DEEPSEEK_API_KEY)
 python -m evals.dashboard                            # Generate HTML dashboard
-python -m evals.prompt_ab_judge_agreement            # Prompt A/B testing
+python day24_prompt_ab_judge.py                      # Prompt A/B testing
 python -m evals.agent_trajectory_eval                # Agent trajectory evaluation
 ```
 
@@ -91,3 +91,27 @@ docker build -f Dockerfile.example -t langchain-app .
 - `temperature=0` in LLM factory for reproducibility
 - Capstone eval uses a JSON eval set with quantifyable metrics (keyword score ≥ 0.67, citation score ≥ 0.67)
 - CI gate blocks merge if quality drops below threshold
+
+# Memory
+
+Working memory for the productivity system. Full knowledge base in `memory/`.
+
+## Me
+ajar（loonslo），测试工程师，正在转 AI Agent 应用开发。目标：2~3 个月内完成学习并跳槽（起点约 2026-07）。
+
+## Terms
+| 术语 | 含义 |
+|------|------|
+| 护城河 | 评估 + 测试背景：pytest 回归、CI 质量门禁、评估平台 |
+| capstone | 毕业项目：企业知识库 Agent + 自动化评估平台 |
+| 转行日记 | 小红书每日学习帖（ai-transition-diary 技能生成） |
+
+## Projects
+| 名称 | 内容 |
+|------|------|
+| **langchain-learning** | 主项目：Day1-71 学习曲线 + capstone，详见 memory/projects/ |
+
+## Preferences
+- 中文交流，简洁直接
+- 只保留高效、以转行为第一性目标的代码与任务
+- 任务记录在 TASKS.md，用 dashboard.html 可视化管理
