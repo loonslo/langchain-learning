@@ -2,7 +2,7 @@
 
 > 循序渐进的每日代码：从"问一次"到"能查文档、能评测、能上线"，一天一个核心概念。
 > 每个文件开头有「这天学什么」，关键行有注释，能独立运行。
-> 严格对齐 `AI应用开发-完整学习大纲.md` / `AI应用开发-每日任务清单.md`：**统一编号 Day1-71，文件名即 dayNN**。
+> 严格对齐 `AI应用开发-完整学习大纲.md`：**统一编号 Day1-71，文件名即 dayNN**。
 > 2026-06-24 完成全量重排：旧版错位编号已删除，现一套干净的 day01-71。
 
 ## 环境
@@ -81,10 +81,10 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 | 21 | `day21_eval_dataset_ragas.py` | 造评测集（下）：拒答/引用 + RAGAS/DeepEval |
 | 22 | `day22_langsmith_eval.py` | LangSmith trace + 在线评估 |
 | 23 | `day23_eval_regression_curve.py` | 评测集版本化 + 回归曲线（→ `evals/run_eval_platform`）|
-| 24 | `day24_prompt_ab_judge.py` | prompt A/B + judge 一致性（→ `evals/prompt_ab_judge_agreement`）|
+| 24 | `day24_prompt_ab_judge.py` | prompt A/B + judge 一致性（独立可运行）|
 | 25 | `day25_agent_trajectory_eval.py` | Agent 轨迹评测（→ `evals/agent_trajectory_eval`）|
-| 26 | `day26_eval_report_failures.py` | 评测报告 + 失败用例库 + 成本/延迟基线 |
-| 27 | `day27_eval_dashboard.py` | 评测看板（→ `evals/dashboard`，首个可投作品）|
+| 26 | `day26_eval_report_failures.py` | 生产级失败诊断（DeepEval 维度分）+ 质量门禁（框架分判决 + 趋势守护）。原 day27 门禁已并入本天 |
+| ~~27~~ | ~~`day27_eval_dashboard.py`~~ | 已合并进 day26：诊断与门禁是同一动作的前后段，拆两天会误以为是两个并列能力；真正「接进 CI」的部署篇见 Day58（capstone/ci_gate.py + .github/workflows/eval-gate.yml）|
 
 ### 阶段3 Agent / LangGraph（Day28-40）
 
@@ -174,7 +174,7 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 
 ```bash
 python -m evals.run_eval_platform        # 质量+成本+延迟+失败库+回归记录
-python -m evals.prompt_ab_judge_agreement # prompt A/B + judge 一致性
+python day24_prompt_ab_judge.py          # prompt A/B + judge 一致性
 python -m evals.agent_trajectory_eval     # Agent 轨迹评测
 python -m evals.dashboard                 # 生成 reports/dashboard.html 看板
 ```

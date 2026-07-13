@@ -1,0 +1,36 @@
+[FAIL] ����Ž�δͨ����31 �� case ά�ȷֵ��� 0.7
+    - rag_f_002: answer_relevancy=0.0, contextual_precision=0
+    - rag_f_003: answer_relevancy=0.333, contextual_precision=0
+    - rag_f_004: answer_relevancy=0.0, contextual_precision=0
+    - rag_f_005: answer_relevancy=0.0, contextual_precision=0
+    - rag_f_006: answer_relevancy=0.333, contextual_precision=0
+    - rag_f_007: answer_relevancy=0.0, contextual_precision=0
+    - rag_f_009: answer_relevancy=0.0, contextual_precision=0
+    - rag_f_010: answer_relevancy=0.0, contextual_precision=0
+    - rag_c_012: contextual_precision=0
+    - rag_c_013: answer_relevancy=0.333, contextual_precision=0
+    - rag_c_014: answer_relevancy=0.0, contextual_precision=0
+    - rag_c_015: answer_relevancy=0.0, contextual_precision=0
+    - rag_c_016: answer_relevancy=0.0, contextual_precision=0
+    - rag_c_017: answer_relevancy=0.0, contextual_precision=0
+    - rag_c_018: answer_relevancy=0.0, contextual_precision=0
+    - rag_c_019: answer_relevancy=0.5, contextual_precision=0
+    - rag_ref_023: answer_relevancy=0.0, contextual_precision=0
+    - rag_ref_025: answer_relevancy=0.0, contextual_precision=0
+    - agent_037: answer_relevancy=0.0, contextual_precision=0
+    - agent_038: answer_relevancy=0.0, contextual_precision=0
+    - agent_040: answer_relevancy=0.0, contextual_precision=0
+    - agent_041: answer_relevancy=0.0, contextual_precision=0
+    - agent_042: faithfulness=0.0, answer_relevancy=0.0, contextual_precision=0
+    - agent_043: answer_relevancy=0.0, contextual_precision=0
+    - agent_044: answer_relevancy=0.333, contextual_precision=0
+    - agent_045: answer_relevancy=0.667
+    - ab_048: answer_relevancy=0.5, contextual_precision=0
+    - ab_049: answer_relevancy=0.0, contextual_precision=0
+    - ab_050: answer_relevancy=0.0, contextual_precision=0
+    - ab_051: answer_relevancy=0.0, contextual_precision=0
+    - ab_052: answer_relevancy=0.0, contextual_precision=0
+
+������棺D:\workspace\langchain-learning\reports\quality_gate.json
+
+[BLOCK] �Ž�δͨ����exit code=1
