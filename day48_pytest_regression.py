@@ -14,13 +14,13 @@ Day17-20 的评测是手动跑、肉眼看。这节把它变成 pytest 用例：
    要用"包含关键词 / 是否拒答"这类宽松断言，并把 temperature 调到 0 提升可复现
 
 依赖：pip install pytest
-运行：pytest day42_pytest_regression.py -v
-   或：python day42_pytest_regression.py   （文件底部自带入口，免配置）
+运行：pytest day48_pytest_regression.py -v
+   或：python day48_pytest_regression.py   （文件底部自带入口，免配置）
 ==========================================================
 """
 
 import pytest
-from day11_rag_pdf_sources import build_retriever, build_rag_chain
+from day12_rag_pdf_sources import build_retriever, build_rag_chain
 
 
 # fixture：被多个测试共享的"前置准备"。scope="module" 表示整个文件只建一次库。

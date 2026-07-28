@@ -3,7 +3,7 @@ Day 22 · LangSmith：trace 可视化 + 在线评估
 ==========================================================
 测试工程师转 AI 应用开发  ★护城河：可观测★
 
-前面 day17-20 的评测是"本地算指标"。但 RAG 答错时，你还想知道——
+前面 day18-21 的评测是"本地算指标"。但 RAG 答错时，你还想知道——
 错在检索哪一步？召回了什么？prompt 收到的上下文长啥样？
 LangSmith 把每次调用的"检索→拼上下文→生成"每一步都记成一条 trace，
 出问题点开就能看，不用塞一堆 print。这就是"可观测"，面试高频词。
@@ -48,7 +48,7 @@ def trace_demo():
 
 def langsmith_eval():
     """进阶：把评测集传成 dataset，定义评分函数，用 LangSmith 批量评估。
-    依赖 eval_set_full.json（先跑 day19、day20 生成）。"""
+    依赖 eval_set_full.json（先跑 day20、day21 生成）。"""
     if not HAS_KEY:
         print("（未配 key，跳过在线评估）")
         return
@@ -57,7 +57,7 @@ def langsmith_eval():
 
     data_file = Path("eval_set_full.json")
     if not data_file.exists():
-        print("先跑 day19、day20 生成 eval_set_full.json 再来")
+        print("先跑 day20、day21 生成 eval_set_full.json 再来")
         return
     cases = [c for c in json.loads(data_file.read_text(encoding="utf-8"))
              if not c.get("should_refuse")]   # 在线评估先只跑有答案的题

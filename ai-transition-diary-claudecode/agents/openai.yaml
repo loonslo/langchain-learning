@@ -1,0 +1,4 @@
+interface:
+  display_name: "AI 转型日记"
+  short_description: "对比今昨代码，每次生成横版流程图、文案和 Word 附件"
+  default_prompt: "Use $ai-transition-diary 对比我今天和昨天的两个 Python 文件，只写新增或变化的内容，并直接生成文案、至少一张横版代码流程图、完整配图和源码 Word 附件后回写发布稿。"

@@ -7,7 +7,7 @@
   1. 只改下面 ===== 每天编辑区 ===== 的 DAY / DATE / OUTDIR 和 D（内容）。
   2. 其余渲染逻辑、配色、布局、署名都已固定，无需改动。
   3. 运行： python render_cards_template.py
-  4. 图片输出到 OUTDIR，文件名形如 {DATE}-AI-Day{DAY}-0N-xxx.png，最后一张固定为 glossary。
+  4. 图片输出到 OUTDIR，文件名形如 {DATE}-AI-Day{DAY}-0N-xxx.png，04 固定为 source-logic，最后一张固定为 glossary。
 
 风格约定（与 SKILL.md / style-checklist.md 一致）：
   - 图里只放“框体 + 流程”，不放代码块（完整代码只在 Word 附件）。
@@ -66,6 +66,30 @@ D = {
                            ("向量数据怎么保存", "bar"), ("分别去搜，再合并", None)],
                   "result": ["结果", "√ 命中了正文"]},
         "footer": "问题不变，换个说法去搜，答案就找回来了",
+    },
+    # 源码结构图解（必做）：mode 可选 branch_loop / linear / equivalence
+    "source_logic": {
+        "mode": "branch_loop",
+        "kicker": ("源码结构图解", "blue"),
+        "title": "build_handmade() 流程图",
+        "lead": "把函数内部的节点、判断和回环摊开，看清一次调用到底怎么走。",
+        "callout": ("关键调用", "llm_with_tools.invoke(messages)"),
+        "main": ("agent", "LLM 节点", "blue"),
+        "condition": ("tools_condition", "是否需要调用工具？"),
+        "end": "END",
+        "yes": "是 · 调工具",
+        "no": "否 · 直接回答",
+        "branch": ("tools", "ToolNode 执行工具", "teal"),
+        "loop": "工具结果加入 messages，再回到 agent",
+        "notes": [
+            "agent 先根据当前 messages 生成结果",
+            "条件节点检查结果里有没有工具调用",
+            "需要工具就执行并回传；不需要就结束",
+        ],
+        "footer": "这就是 ReAct：想 → 做 → 看结果 → 再想",
+        # linear 模式改用："rows": [(title, desc, kind, color, tag), ...]
+        # equivalence 模式改用："left"/"right"=(title, desc, color)，
+        # "shared_title"，以及同格式的 "rows"。
     },
     # 做法图（每个新方法一张，纯流程无代码）
     "methods": [
@@ -206,6 +230,33 @@ def flowbox(d,y,bh,title,desc,kind,color,tag_txt):
     return y+bh
 def arrow(d,y): d.text(((CX0+CX1)//2,y+22),"↓",font=font(36,True),fill=MUTE,anchor="mm"); return y+46
 
+def arrow_path(d,pts,color=INK,width=5):
+    d.line(pts,fill=color,width=width,joint="curve")
+    (x0,y0),(x1,y1)=pts[-2],pts[-1]
+    if abs(x1-x0)>=abs(y1-y0):
+        s=1 if x1>x0 else -1; head=[(x1,y1),(x1-14*s,y1-9),(x1-14*s,y1+9)]
+    else:
+        s=1 if y1>y0 else -1; head=[(x1,y1),(x1-9,y1-14*s),(x1+9,y1-14*s)]
+    d.polygon(head,fill=color)
+
+def center_box(d,box,title,desc,color="blue",pill=False):
+    acc,accbg=COLORS[color]
+    assert_inside(box,[MARGIN,MARGIN,W-MARGIN,H-MARGIN],"source logic node")
+    d.rounded_rectangle(box,radius=(box[3]-box[1])//2 if pill else 18,fill=accbg,outline=acc,width=3)
+    items=[(title,font(31,True),acc)]
+    if desc: items.append((desc,font(25),INK))
+    total=sum(lh(f) for _,f,_ in items)+10*(len(items)-1); yy=(box[1]+box[3]-total)//2
+    for txt,f,fill in items:
+        d.text(((box[0]+box[2])//2,yy),txt,font=f,fill=fill,anchor="ma"); yy+=lh(f)+10
+
+def notes_box(d,notes,top,bottom,accent):
+    rr(d,[CX0,top,CX1,bottom],18,(245,247,250)); y=top+22
+    f=font(25)
+    for i,note in enumerate(notes[:5],1):
+        d.ellipse([CX0+24,y+5,CX0+52,y+33],fill=accent)
+        d.text((CX0+38,y+19),str(i),font=font(18,True),fill=(255,255,255),anchor="mm")
+        y=para(d,CX0+68,y,note,f,INK,CW-100,gap=5)+9
+
 def render_cover():
     img,d=canvas(); c=D["cover"]
     y=MARGIN+70; top=y; lbl=f"{SERIES} · Day{DAY}"; ch_b=chip(d,CX0,y,lbl,TEAL,TEAL_BG,30)
@@ -255,6 +306,55 @@ def render_compare():
     col(lx0,c["left"],RED); col(rx0,c["right"],GREEN)
     footer(d,c["footer"]); save(img,f"{DATE}-AI-Day{DAY}-03-compare.png")
 
+def render_source_logic():
+    s=D["source_logic"]; img,d=canvas(); klab,kcol=s["kicker"]; acc,accbg=COLORS[kcol]
+    y=MARGIN+56; chip(d,CX0,y,klab,acc,accbg,30); sign(d); y+=100
+    title_font=font(50,True); lines=wrap(d,s["title"],title_font,CW)
+    for ln in lines[:2]: d.text((CX0,y),ln,font=title_font,fill=INK,anchor="la"); y+=lh(title_font)+8
+    y+=14; y=para(d,CX0,y,s["lead"],font(29),MUTE,CW,gap=6)+18
+    mode=s.get("mode","linear")
+    if mode=="branch_loop":
+        lab,call=s["callout"]; rr(d,[CX0,y,CX1,y+82],16,(255,247,224))
+        d.text((CX0+24,y+18),lab,font=font(23,True),fill=(180,110,0),anchor="la")
+        d.text((CX0+190,y+18),call,font=font(23,True),fill=INK,anchor="la"); y+=104
+        start=[420,y,660,y+70]; center_box(d,start,"START","","green",True)
+        main=[300,y+118,780,y+218]; mt,md,mc=s["main"]; center_box(d,main,mt,md,mc)
+        diamond=[(540,y+260),(790,y+340),(540,y+420),(290,y+340)]
+        d.polygon(diamond,fill=(255,247,222),outline=(220,150,15)); d.line(diamond+[diamond[0]],fill=(220,150,15),width=3)
+        ct,cd=s["condition"]; d.multiline_text((540,y+320),ct+"\n"+cd,font=font(25,True),fill=INK,anchor="mm",align="center",spacing=8)
+        end=[820,y+300,1000,y+380]; center_box(d,end,s["end"],"","red",True)
+        bt,bd,bc=s["branch"]; branch=[350,y+470,730,y+570]; center_box(d,branch,bt,bd,bc)
+        arrow_path(d,[(540,start[3]),(540,main[1])]); arrow_path(d,[(540,main[3]),(540,diamond[0][1])])
+        arrow_path(d,[(790,y+340),(820,y+340)]); d.text((805,y+300),s["no"],font=font(21,True),fill=MUTE,anchor="ms")
+        arrow_path(d,[(540,y+420),(540,branch[1])]); d.text((565,y+446),s["yes"],font=font(21,True),fill=MUTE,anchor="ls")
+        arrow_path(d,[(branch[0],y+520),(150,y+520),(150,main[1]+50),(main[0],main[1]+50)])
+        d.text((CX0,y+592),s["loop"],font=font(24,True),fill=TEAL,anchor="la")
+        notes_top=y+634
+    elif mode=="equivalence":
+        left=s["left"]; right=s["right"]; gap=70; bw=(CW-gap)//2
+        center_box(d,[CX0,y,CX0+bw,y+125],left[0],left[1],left[2]); center_box(d,[CX1-bw,y,CX1,y+125],right[0],right[1],right[2])
+        d.text((W//2,y+62),"=",font=font(48,True),fill=INK,anchor="mm")
+        d.text((W//2,y+150),s.get("bridge","外层写法不同，内部骨架相同"),font=font(24,True),fill=MUTE,anchor="mm")
+        y+=196; d.text((CX0,y),s.get("shared_title","共同的内部流程"),font=font(30,True),fill=acc,anchor="la"); y+=48
+        rows=s["rows"]; bh=max(92,min(118,(500-44*(len(rows)-1))//max(1,len(rows))))
+        for i,row in enumerate(rows):
+            y=flowbox(d,y,bh,*row)
+            if i<len(rows)-1: y=arrow(d,y)
+        notes_top=y+20
+    else:
+        if s.get("callout"):
+            lab,call=s["callout"]; rr(d,[CX0,y,CX1,y+82],16,(255,247,224))
+            d.text((CX0+24,y+18),lab,font=font(23,True),fill=(180,110,0),anchor="la")
+            d.text((CX0+190,y+18),call,font=font(23,True),fill=INK,anchor="la"); y+=104
+        rows=s["rows"]; bh=max(96,min(125,(590-44*(len(rows)-1))//max(1,len(rows))))
+        for i,row in enumerate(rows):
+            y=flowbox(d,y,bh,*row)
+            if i<len(rows)-1: y=arrow(d,y)
+        notes_top=y+20
+    notes_bottom=H-MARGIN-132
+    if notes_top<notes_bottom-80: notes_box(d,s.get("notes",[]),notes_top,notes_bottom,acc)
+    footer(d,s["footer"]); save(img,f"{DATE}-AI-Day{DAY}-04-source-logic.png")
+
 def render_methods():
     for idx,m in enumerate(D["methods"]):
         img,d=canvas(); klab,kcol=m["kicker"]; acc,accbg=COLORS[kcol]
@@ -266,7 +366,7 @@ def render_methods():
             y=flowbox(d,y,bh,t,sub,kind,col,tg)
             if i<len(m["rows"])-1: y=arrow(d,y)
         footer(d,m["footer"])
-        save(img,f"{DATE}-AI-Day{DAY}-{idx+4:02d}-method.png")
+        save(img,f"{DATE}-AI-Day{DAY}-{idx+5:02d}-method.png")
 
 
 def render_glossary():
@@ -287,10 +387,10 @@ def render_glossary():
         vblock(d,CX0+54,y,y+bh,[(term,font(32,True),acc),(desc,font(27),INK)],10)
         y+=bh+gap
     footer(d,g["footer"])
-    idx=len(D["methods"])+4
+    idx=len(D["methods"])+5
     save(img,f"{DATE}-AI-Day{DAY}-{idx:02d}-glossary.png")
 
 if __name__=="__main__":
     os.makedirs(OUTDIR,exist_ok=True)
-    render_cover(); render_pipeline(); render_compare(); render_methods(); render_glossary()
+    render_cover(); render_pipeline(); render_compare(); render_source_logic(); render_methods(); render_glossary()
     print("done.")

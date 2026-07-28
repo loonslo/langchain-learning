@@ -24,20 +24,20 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DB = "app.db"
-ALLOWED_TABLES = {"sales", "conversations"}
+ALLOWED_TABLES = {"sales", "conversations"}        # 白名单：只有这些表能查
 DANGEROUS = {"insert", "update", "delete", "drop", "alter", "create", "replace", "attach", "detach", "pragma"}
 
 
 @dataclass
 class QueryResult:
-    sql: str
-    rows: list[dict]
-    answer: str
+    sql: str            # 实际执行的 SQL（便于溯源/调试）
+    rows: list[dict]    # 查询到的原始行
+    answer: str         # 解释给用户的自然语言答案
 
 
 def get_conn():
     conn = sqlite3.connect(DB)
-    conn.row_factory = sqlite3.Row
+    conn.row_factory = sqlite3.Row    # 让查询结果能按列名取值（dict 风格）
     return conn
 
 
@@ -118,32 +118,43 @@ def generate_sql(question: str) -> str:
 
 
 def validate_sql(sql: str) -> None:
+    """执行前的安全门：任何一条守卫不过就抛错，绝不放行到数据库。
+    这是 Text2SQL 的核心——哪怕以后换成 LLM 生成 SQL，这道门也必须保留。"""
+    # 压平空白，统一转小写，方便后面用关键字/正则匹配
     compact = " ".join(sql.strip().split())
     lowered = compact.lower()
+    # 守卫1：只允许 SELECT 开头，从根上排除写操作
     if not lowered.startswith("select "):
         raise ValueError("只允许 SELECT 查询")
+    # 守卫2：按"单词"切 token，命中危险关键字集合就拦（防 insert/drop/pragma 等）
     tokens = set(re.findall(r"\b[a-z_]+\b", lowered))
     if tokens & DANGEROUS:
         raise ValueError("SQL 含危险关键字")
 
+    # 守卫3：提取 from/join 后面的表名，必须全部落在白名单内
     tables = set(re.findall(r"\bfrom\s+([a-zA-Z_][a-zA-Z0-9_]*)|\bjoin\s+([a-zA-Z_][a-zA-Z0-9_]*)", lowered))
-    flattened = {name for pair in tables for name in pair if name}
+    flattened = {name for pair in tables for name in pair if name}   # 展平正则的两个捕获组
     if not flattened:
         raise ValueError("未识别到查询表")
-    if not flattened <= ALLOWED_TABLES:
+    if not flattened <= ALLOWED_TABLES:   # 子集判断：出现任何非白名单表都拒绝
         raise ValueError(f"表不在白名单内：{flattened - ALLOWED_TABLES}")
+    # 守卫4：强制带 LIMIT，避免一次拉全表拖垮服务
     if " limit " not in lowered:
         raise ValueError("必须带 LIMIT，避免大查询")
 
 
 def execute_sql(sql: str) -> list[dict]:
-    validate_sql(sql)
+    """先过安全门再执行，结果统一转成 dict 列表。
+    注：教学版用普通连接 + validate_sql 拦写操作；生产建议再叠一层只读连接
+    （sqlite3.connect("file:app.db?mode=ro", uri=True)）做纵深防御。"""
+    validate_sql(sql)   # 关键顺序：先校验，通过了才碰数据库
     with get_conn() as conn:
         rows = conn.execute(sql).fetchall()
-    return [dict(r) for r in rows]
+    return [dict(r) for r in rows]   # sqlite3.Row → 普通 dict，便于下游拼答案
 
 
 def explain_result(question: str, sql: str, rows: list[dict]) -> str:
+    """把查询结果翻译成人话；附带 SQL 便于溯源/排错（测试背景的可观测习惯）。"""
     if not rows:
         return f"没有查到结果。SQL: {sql}"
     if len(rows) == 1:
@@ -152,6 +163,7 @@ def explain_result(question: str, sql: str, rows: list[dict]) -> str:
 
 
 def text2sql_answer(question: str) -> QueryResult:
+    """Text2SQL 主流程：生成 SQL → 安全校验并执行 → 解释结果，三步串起来。"""
     sql = generate_sql(question)
     rows = execute_sql(sql)
     return QueryResult(sql=sql, rows=rows, answer=explain_result(question, sql, rows))
@@ -182,6 +194,7 @@ if __name__ == "__main__":
 # ----------------------------------------------------------
 # 小结：
 # - RAG 问文档，Text2SQL 问表。Agent 的价值是按问题自动分流。
-# - 只读连接、白名单表、SELECT-only、LIMIT 是 Text2SQL 的安全底线。
+# - 白名单表、SELECT-only、危险词拦截、强制 LIMIT 是 Text2SQL 的安全底线；
+#   生产再叠一层只读连接（mode=ro）做纵深防御，validate_sql 被绕过也写不了库。
 # - 真实项目里可以让 LLM 生成 SQL，但执行前必须保留 validate_sql 这道门。
 # ----------------------------------------------------------

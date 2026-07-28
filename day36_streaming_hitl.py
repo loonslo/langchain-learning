@@ -64,29 +64,36 @@ def demo_streaming():
         print("  ->", step)
 
 
+def ask_human(prompt: str) -> str:
+    """真人审批：终端里问，直到给出 yes / no 为止。"""
+    while True:
+        answer = input(f"{prompt} > ").strip().lower()
+        if answer in ("yes", "no"):
+            return answer
+        print("  只接受 yes / no，重新输入：")
+
+
+def run_hitl(app, thread_id: str, target: str) -> None:
+    """跑一个删除任务：到 interrupt 停下 → 终端等你输入 → resume 继续。"""
+    cfg = {"configurable": {"thread_id": thread_id}}
+    # 第一次 invoke：跑到 interrupt 就停下，返回里带 __interrupt__
+    out = app.invoke({"target": target, "result": ""}, cfg)
+    pause = out["__interrupt__"][0].value
+    print(f"\n图已暂停，等人工审批：action={pause['action']}, target={pause['target']}")
+    # 你在终端输入什么，interrupt() 处的 decision 就是什么——这才是真 HITL
+    decision = ask_human(pause["ask"])
+    final = app.invoke(Command(resume=decision), cfg)
+    print("  结果：", final["result"])
+
+
 if __name__ == "__main__":
     print("===== 1) streaming 中间步骤 =====")
     demo_streaming()
 
-    print("\n===== 2) HITL 人工审批 =====")
+    print("\n===== 2) HITL 人工审批（真交互：你来批） =====")
     app = build_app()
-    cfg = {"configurable": {"thread_id": "task-1"}}
-
-    # 第一次 invoke：跑到 interrupt 就停下，返回里带 __interrupt__
-    out = app.invoke({"target": "report.docx", "result": ""}, cfg)
-    pause = out["__interrupt__"][0].value
-    print(f"\n图已暂停，等待人工确认：{pause}")
-
-    # 模拟人工批准：用 Command(resume=...) 把决定传回去，图从断点继续
-    print("\n人工回复 yes，继续执行：")
-    final = app.invoke(Command(resume="yes"), cfg)
-    print("  结果：", final["result"])
-
-    # 另一个会话演示拒绝
-    cfg2 = {"configurable": {"thread_id": "task-2"}}
-    app.invoke({"target": "db_backup.sql", "result": ""}, cfg2)
-    final2 = app.invoke(Command(resume="no"), cfg2)
-    print("\n另一会话人工回复 no：", final2["result"])
+    run_hitl(app, "task-1", "report.docx")
+    run_hitl(app, "task-2", "db_backup.sql")
 
 
 # ----------------------------------------------------------
@@ -98,6 +105,11 @@ if __name__ == "__main__":
 # 面试话术：
 #   "Agent 的高风险动作我都加 human-in-the-loop：interrupt 暂停等人工审批，
 #    且危险工具不给真实权限，只做模拟——宁可拦错，不可误删。"
+#
+# - 交互版的关键：图停在 interrupt 后进程没有被"卡住"，invoke 已经返回了；
+#   等 input() 的是普通 Python 代码。你输入后用 Command(resume=输入值) 二次 invoke，
+#   checkpointer 从断点恢复——"暂停"存在 checkpoint 里，不在进程里。
+#   所以审批人甚至可以是另一个进程/网页（capstone 的 HITL API 就是这么做的）。
 #
 # 动手练习：把 confirm 改成"只有金额 > 1000 才 interrupt，否则直接放行"。
 # ----------------------------------------------------------

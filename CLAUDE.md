@@ -56,6 +56,15 @@ python capstone/main.py eval                         # Run evaluation + report
 ```bash
 pytest day48_pytest_regression.py -v                 # RAG regression tests
 pytest capstone/test_regression.py -v                # Capstone regression tests
+pytest test_day44.py -v                              # SQLite data layer (injection, WAL concurrency, migration)
+pytest test_day41.py -v                              # FastAPI service (fake RAG, no LLM/API key needed)
+```
+
+### Load testing (SLO gate, exit code 1 on violation)
+```bash
+python day66_loadtest_locust.py --fake --users 20 --time 30s --upstream-ms 800   # fake upstream, no API cost, CI-safe
+python day66_loadtest_locust.py --host http://127.0.0.1:8000 --users 10 --time 60s  # against real service
+locust -f day66_loadtest_locust.py --host http://127.0.0.1:8000                   # interactive UI
 ```
 
 ### Services
@@ -63,6 +72,7 @@ pytest capstone/test_regression.py -v                # Capstone regression tests
 uvicorn day41_serve_fastapi:app --reload             # Day41 FastAPI service
 uvicorn capstone.api:app --reload                    # Capstone API (http://127.0.0.1:8000/docs)
 streamlit run capstone/app_streamlit.py              # Capstone Streamlit UI
+python day40_mcp_server_http.py                      # Day40 remote MCP server (streamable-http, :8000/mcp)
 ```
 
 ### Docker

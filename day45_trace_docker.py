@@ -4,7 +4,7 @@ Day 45 · 用 Docker 打包部署
 测试工程师转 AI 应用开发  ← 阶段4 工程化收尾
 
 "在我机器上能跑"不算交付。Docker 把代码 + 依赖 + 运行环境装进一个镜像，
-到哪台机器都一样跑，这是现代部署的基本功。本节把 Day35 的 FastAPI 服务
+到哪台机器都一样跑，这是现代部署的基本功。本节把 Day41 的 FastAPI 服务
 打包成镜像。
 
 这个文件本身不是要运行的程序——跑它会在当前目录生成 Dockerfile.example 等
@@ -30,7 +30,7 @@ COPY . .
 # 服务监听端口
 EXPOSE 8000
 
-# 启动 Day35 的 FastAPI 服务
+# 启动 Day41 的 FastAPI 服务
 CMD ["uvicorn", "day35_serve_fastapi:app", "--host", "0.0.0.0", "--port", "8000"]
 """
 
