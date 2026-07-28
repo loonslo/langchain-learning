@@ -10,17 +10,17 @@ Day 18 · RAG 评测入门：造评测集 + 手写三大指标
 1. 拒答正确率：文档里没有的问题，模型有没有老实说"不知道"（防幻觉的底线）
 2. 关键词命中率：答案里有没有覆盖标准答案的核心关键词
 
-★重点改进：评测集不再写死在本文件，而是直接读 Day19/20 造的 eval_set_full.json。
+★重点改进：评测集不再写死在本文件，而是直接读 Day20/21 造的 eval_set_full.json。
   "造评测集"和"跑评测"用同一份数据——这才是真正的回归用例库，不是两套各写一遍。
-  （还没跑过 day19/20 时，自动退回内置示范集，保证本文件能独立运行。）
+  （还没跑过 day20/21 时，自动退回内置示范集，保证本文件能独立运行。）
 ==========================================================
 """
 
 import json
 from pathlib import Path
-from day11_rag_pdf_sources import build_retriever, build_rag_chain
+from day12_rag_pdf_sources import build_retriever, build_rag_chain
 
-# 内置示范集（兜底）：当 day19/20 的 JSON 还没生成时用，保证本文件能独立跑
+# 内置示范集（兜底）：当 day20/21 的 JSON 还没生成时用，保证本文件能独立跑
 INLINE_DEMO = [
     {"question": "RAG 是什么", "keywords": ["检索", "生成"], "should_refuse": False},
     {"question": "FAISS 有什么作用", "keywords": ["向量"], "should_refuse": False},
@@ -34,7 +34,7 @@ REFUSE_HINTS = ["没有提到", "我不知道", "未提及", "无法回答", "�
 
 
 def load_eval_set():
-    """优先用 Day20 全集，其次 Day19 基础集，都没有才用内置示范。"""
+    """优先用 Day21 全集，其次 Day20 基础集，都没有才用内置示范。"""
     for name in ("eval_set_full.json", "eval_set.json"):
         p = Path(name)
         if p.exists():
@@ -92,9 +92,9 @@ if __name__ == "__main__":
 # - 评测的核心是"造好带期望的评测集"，再用可解释的指标去算
 # - 拒答正确率 = 防幻觉的底线；关键词命中 = 答得对不对的粗判
 # - 这些指标都带分母，能说清"X/Y = Z%"，面试时这就是硬通货
-# - 评测集从 JSON 读，和 day19/20/22 共用一份，改一处全线生效
+# - 评测集从 JSON 读，和 day20/21/22 共用一份，改一处全线生效
 #
-# 局限：关键词完全匹配太死板（同义不同词会误判）。Day18 用 LLM-as-judge 解决。
+# 局限：关键词完全匹配太死板（同义不同词会误判）。Day19 用 LLM-as-judge 解决。
 #
-# 动手练习：先跑 day19、day20 生成 eval_set_full.json，再跑本文件，看 30+ 条的指标
+# 动手练习：先跑 day20、day21 生成 eval_set_full.json，再跑本文件，看 30+ 条的指标
 # ----------------------------------------------------------

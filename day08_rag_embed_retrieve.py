@@ -17,6 +17,9 @@ Day7 把文档切成了块。这节解决一个核心问题：
 from langchain_core.documents import Document
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_huggingface import HuggingFaceEmbeddings
+# 注（2026-06）：langchain-community 仓库已归档停维护（官方 issue #674），FAISS 暂无
+# 独立集成包、仍从这里导入。学习用没问题；面试要能讲清 v1 方向：一个供应商一个包
+# （langchain-chroma / langchain-openai…），legacy 归 langchain-classic。
 from langchain_community.vectorstores import FAISS
 
 # ---------- 1. 加载 + 切割（复用 Day7 的做法）----------

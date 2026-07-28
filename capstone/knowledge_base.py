@@ -67,7 +67,14 @@ class KnowledgeBase:
         # 混合检索：向量 + BM25（BM25 需要 chunk 列表，缺则退回纯向量）
         vector_ret = self.vectorstore.as_retriever(search_kwargs={"k": C.TOP_K})
         if self.chunks:
-            bm25 = BM25Retriever.from_documents(self.chunks); bm25.k = C.TOP_K
+            # ★中文必须传 preprocess_func：BM25 默认按空格分词，中文整句=1 个 token，
+            #   BM25 那一路等于摆设（有向量兜底所以此前没暴露）。bigram 零依赖，可换 jieba。
+            def _tok_zh(text: str) -> list[str]:
+                text = "".join(text.split())
+                return [text[i:i + 2] for i in range(len(text) - 1)] or [text]
+
+            bm25 = BM25Retriever.from_documents(self.chunks, preprocess_func=_tok_zh)
+            bm25.k = C.TOP_K
             self.retriever = EnsembleRetriever(retrievers=[vector_ret, bm25],
                                                weights=[0.5, 0.5])
         else:
@@ -84,7 +91,9 @@ class KnowledgeBase:
         return "\n\n".join(parts)
 
     def chain(self, temperature: float = 0.0):
-        llm = C.get_llm(temperature=temperature)
+        # 用户会真的问这个链——超时/重试保护走 get_reliable_llm，
+        # 别用裸的 get_llm（day42）
+        llm = C.get_reliable_llm(temperature=temperature)
         prompt = ChatPromptTemplate.from_template(
             "你是严谨的知识库助手，依据上下文回答：\n"
             "- 有相关信息（哪怕部分）就尽量答，并在结尾用【来源】标注；\n"

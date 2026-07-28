@@ -1,0 +1,18 @@
+[
+  {"question": "你们退货政策是什么样的", "intent": "faq", "keywords": ["7 天", "退货"]},
+  {"question": "退款多久能到账", "intent": "faq", "keywords": ["工作日"]},
+  {"question": "可以开增值税专用发票吗", "intent": "faq", "keywords": ["发票"]},
+  {"question": "优惠券能叠加吗", "intent": "faq", "keywords": ["优惠券"]},
+  {"question": "帮我查下订单 A1001 到哪了", "intent": "order", "keywords": ["A1001", "已发货"]},
+  {"question": "我的快递怎么还没发货，单号 A1002", "intent": "order", "keywords": ["A1002", "48 小时"]},
+  {"question": "查订单", "intent": "order", "keywords": ["订单号"]},
+  {"question": "太差了我要投诉你们", "intent": "complaint", "escalate": true, "keywords": ["工单"]},
+  {"question": "垃圾平台，退钱！", "intent": "complaint", "escalate": true, "keywords": ["工单"]},
+  {"question": "你好在吗", "intent": "chitchat", "keywords": ["客服"]},
+  {"question": "谢谢啦", "intent": "chitchat", "keywords": []},
+  {"session": [
+      {"question": "帮我查下订单 A1003", "intent": "order", "keywords": ["A1003", "退款中"]},
+      {"question": "就是刚才那个订单，物流呢", "intent": "order", "keywords": ["A1003"]}
+   ],
+   "note": "多轮指代：第二轮不带单号，靠会话历史找回"}
+]

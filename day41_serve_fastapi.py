@@ -1,65 +1,350 @@
 """
-Day 41 · 把 RAG 包成 HTTP 接口（FastAPI）
+Day 41 · 把 RAG 包成生产级 HTTP 服务（FastAPI + Day44 数据层）
 ==========================================================
-测试工程师转 AI 应用开发
+测试工程师转 AI 应用开发  ← 阶段4 工程化
 
-到现在 RAG 还只能在命令行跑。要给别人用、要接前端，得做成 HTTP 服务。
-这节用 FastAPI 把 Day10 的 RAG 包成 /chat 接口。
+RAG 只能在命令行跑，等于没上线。这节把它做成真正能对外的 HTTP 服务。
 
-知识点：
-1. FastAPI 定义接口 + Pydantic 定义请求/响应结构（自带类型校验和文档）
-2. 启动时建一次库（全局复用），请求时只跑问答，不重复 embedding
-3. 怎么启动、怎么测
+"能返回答案"只是及格线。一个能上生产的 LLM 服务还必须回答四个问题：
+  ① 出问题了怎么查？        → trace_id 贯穿请求、日志、数据库
+  ② 上游挂了服务会不会死？  → 启动降级 + 异常兜底，永远不裸奔 500
+  ③ 这个月花了多少钱？      → 每次请求落库 token / cost / latency（Day44）
+  ④ 答得好不好？            → /feedback 收集点赞点踩 → 导评测集 → 回归测试
+
+所以本文件在 Day41 原版（只有 /chat + /health）之上补齐：
+  /chat      问答，并把 trace_id / 耗时 / token / 成本 / 引用来源全部落库
+  /feedback  用户点赞点踩 —— 数据飞轮的入口
+  /stats     按天的请求数 / 失败率 / 成本 / p95 —— 一句 SQL 出运营看板
+  /history   按用户查历史（游标分页）
+  /health    存活探针（不查依赖，永远秒回）
+  /ready     就绪探针（查依赖，没准备好就返回 503）
 
 依赖：pip install fastapi uvicorn
-运行：uvicorn day35_serve_fastapi:app --reload
-测试：浏览器打开 http://127.0.0.1:8000/docs 直接点（FastAPI 自动生成的接口文档），
-      或命令行：curl -X POST http://127.0.0.1:8000/chat -H "Content-Type: application/json" -d "{\"question\":\"RAG 是什么\"}"
+运行：uvicorn day41_serve_fastapi:app --reload
+调试：浏览器打开 http://127.0.0.1:8000/docs
 ==========================================================
 """
 
-from fastapi import FastAPI
-from pydantic import BaseModel
-from day11_rag_pdf_sources import build_retriever, build_rag_chain
+from __future__ import annotations
 
-app = FastAPI(title="RAG 知识库问答")
+import logging
+import os
+import time
+import uuid
+from contextlib import asynccontextmanager
 
-# 关键点：建库放在模块加载时（服务启动时）只做一次，存成全局变量。
-# 这样每个请求只跑"检索+生成"，不会每次都重新切割、embedding。
-retriever = build_retriever("test_doc.txt")
-rag_chain = build_rag_chain(retriever)
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, Field
+from langchain_core.prompts import ChatPromptTemplate
+
+import day44_sqlite_persistence as store
+from common import get_reliable_llm
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
+)
+log = logging.getLogger("day41")
+
+DOC_PATH = os.getenv("RAG_DOC_PATH", "test_doc.txt")
+
+# ---- 成本单价：示例值，务必换成你模型的真实价格 ----
+# 单位：美元 / 100 万 token。价格会变，所以做成环境变量可覆盖，
+# 而不是写死在代码里——线上调价时不用重新发版。
+PRICE_IN = float(os.getenv("PRICE_IN_PER_M", "0.27"))
+PRICE_OUT = float(os.getenv("PRICE_OUT_PER_M", "1.10"))
 
 
-# 用 Pydantic 定义请求体和响应体：FastAPI 会自动校验类型、自动生成接口文档
+# ============================================================
+# 【一】RAG 链：一次检索同时拿到 答案 + 来源 + token 用量
+# ============================================================
+# Day12 的 build_rag_chain 末尾接了 StrOutputParser，只吐字符串——
+# 拿不到 usage_metadata，也拿不到检索到哪些文档。
+# 生产要落库这两样，所以这里保留 Day12 的 prompt 措辞，
+# 但让链停在 AIMessage（有 usage_metadata），并把 docs 一起返回。
+# 注意只检索【一次】：先 retriever.invoke 再喂 prompt，不要为了拿来源再查一遍。
+
+PROMPT = ChatPromptTemplate.from_template("""
+你是严谨的知识库助手。请依据下面的上下文回答问题：
+- 只要有相关信息（哪怕只是部分），就基于它尽量回答，并在结尾用【来源】标注出处；
+- 只有完全没有相关信息时，才回答"文档中没有提到"。
+
+上下文：
+{context}
+
+问题：
+{question}
+""")
+
+
+def _format_docs(docs) -> str:
+    parts = []
+    for d in docs:
+        src = d.metadata.get("source", "未知")
+        page = d.metadata.get("page")
+        tag = f"[来源：{src}" + (f" 第{page}页]" if page else "]")
+        parts.append(f"{tag}\n{d.page_content}")
+    return "\n\n".join(parts)
+
+
+def _doc_ref(d) -> str:
+    """把文档压成一个可追溯的短标识，存进 sources 字段。"""
+    src = d.metadata.get("source", "未知")
+    page = d.metadata.get("page")
+    return f"{src}#p{page}" if page is not None else str(src)
+
+
+def build_answer_fn(retriever, llm):
+    """返回一个 answer(question) -> dict 的可调用对象。
+
+    拆成工厂函数是为了【可测】：测试时传一个假 retriever / 假 llm 进来，
+    整条接口链路不碰真 LLM 也能跑（见 test_day41.py）。
+    """
+    def answer(question: str) -> dict:
+        docs = retriever.invoke(question)
+        msg = (PROMPT | llm).invoke(
+            {"context": _format_docs(docs), "question": question}
+        )
+        usage = getattr(msg, "usage_metadata", None) or {}
+        return {
+            "answer": msg.content,
+            "sources": [_doc_ref(d) for d in docs],
+            "prompt_tokens": usage.get("input_tokens", 0),
+            "completion_tokens": usage.get("output_tokens", 0),
+        }
+    return answer
+
+
+def estimate_cost(prompt_tokens: int, completion_tokens: int) -> float:
+    return round(
+        prompt_tokens / 1_000_000 * PRICE_IN
+        + completion_tokens / 1_000_000 * PRICE_OUT,
+        8,
+    )
+
+
+# ============================================================
+# 【二】启动：lifespan + 优雅降级
+# ============================================================
+# 原版把 build_retriever 写在模块顶层。三个问题：
+#   1. 建库失败 → 整个模块 import 失败 → 服务根本起不来，日志还很难看
+#   2. uvicorn --reload 每次改代码都重新 embedding 一遍，开发体验极差
+#   3. 没有对应的关闭动作（连接、线程池都没地方清理）
+# 生产写法是 lifespan：yield 之前是启动，之后是关闭。
+# 并且【建库失败不让进程退出】——服务照常起、/health 正常、/ready 返 503，
+# 运维能看到"服务活着但没就绪"，而不是面对一个反复重启的容器。
+
+STATE: dict = {"answer_fn": None, "error": None}
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    store.migrate()                      # 建表 / 升级 schema，幂等
+    log.info("数据库就绪：%s", store.DB_PATH)
+    try:
+        from day12_rag_pdf_sources import build_retriever
+        retriever = build_retriever(DOC_PATH)
+        STATE["answer_fn"] = build_answer_fn(retriever, get_reliable_llm())
+        log.info("知识库就绪：%s", DOC_PATH)
+    except Exception as e:               # noqa: BLE001
+        STATE["error"] = str(e)
+        log.error("知识库构建失败，服务以未就绪状态启动：%s", e)
+    yield
+    store.close_conn()
+    log.info("服务关闭")
+
+
+app = FastAPI(title="RAG 知识库问答服务", version="2.0", lifespan=lifespan)
+
+# 前端跨域调用必须开 CORS。生产把 allow_origins 收窄成你的域名，别用 "*"。
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=os.getenv("CORS_ORIGINS", "*").split(","),
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+
+# ============================================================
+# 【三】中间件：trace_id 贯穿全链路
+# ============================================================
+# 用户来投诉"刚才那个回答不对"，你要能立刻定位到那一次请求。
+# 做法：每个请求生成 trace_id → 写进响应头 → 写进日志 → 存进数据库。
+# 三处用同一个 id，出事时一秒对上号。这是可观测性最低成本的一步。
+@app.middleware("http")
+async def add_trace_id(request: Request, call_next):
+    trace_id = request.headers.get("X-Trace-Id") or str(uuid.uuid4())
+    request.state.trace_id = trace_id
+    t0 = time.perf_counter()
+    response = await call_next(request)
+    elapsed = int((time.perf_counter() - t0) * 1000)
+    response.headers["X-Trace-Id"] = trace_id
+    log.info("%s %s -> %s %dms trace=%s",
+             request.method, request.url.path, response.status_code, elapsed, trace_id)
+    return response
+
+
+@app.exception_handler(Exception)
+async def unhandled(request: Request, exc: Exception):
+    """兜底异常处理：绝不把堆栈吐给用户，但要留下 trace_id 让自己能查。"""
+    trace_id = getattr(request.state, "trace_id", "-")
+    log.exception("未处理异常 trace=%s", trace_id)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "服务内部错误", "trace_id": trace_id},
+        headers={"X-Trace-Id": trace_id},
+    )
+
+
+# ============================================================
+# 【四】请求/响应模型：把校验挡在业务代码之前
+# ============================================================
+# Field 的约束不是装饰：max_length 直接挡住"超长 prompt 打爆成本"这类
+# 最常见的滥用，而且 FastAPI 会自动返回 422 + 清晰错误，不用自己写 if。
 class ChatRequest(BaseModel):
-    question: str
+    question: str = Field(min_length=1, max_length=1000, description="用户问题")
+    user_id: str = Field(default="anonymous", max_length=64)
+    session_id: str | None = Field(default=None, max_length=64)
 
 
 class ChatResponse(BaseModel):
     answer: str
+    sources: list[str]
+    conversation_id: int          # 前端拿它提交反馈
+    trace_id: str
+    latency_ms: int
 
 
+class FeedbackRequest(BaseModel):
+    conversation_id: int
+    rating: int = Field(description="1=赞, -1=踩")
+    comment: str | None = Field(default=None, max_length=500)
+
+
+# ============================================================
+# 【五】接口
+# ============================================================
 @app.get("/health")
 def health():
-    """健康检查：部署后用它确认服务活着（负载均衡/k8s 探针都靠这种接口）。"""
+    """存活探针（liveness）：只证明进程还在，不查任何依赖，永远秒回。
+
+    为什么不查依赖：liveness 失败 k8s 会【重启容器】。
+    如果这里查数据库，数据库抖一下就会引发一轮无意义的重启风暴。
+    """
     return {"status": "ok"}
 
 
+@app.get("/ready")
+def ready():
+    """就绪探针（readiness）：查依赖，没好就返 503 —— 流量不会打进来。
+
+    liveness 管"要不要重启"，readiness 管"要不要给流量"，
+    分开是 k8s 部署的基本功，面试常问。
+    """
+    if STATE["answer_fn"] is None:
+        raise HTTPException(503, detail=f"知识库未就绪：{STATE['error']}")
+    return {"status": "ready", "doc": DOC_PATH}
+
+
+# 注意这里是 def 而不是 async def —— 这是【故意的】。
+# RAG 调用是同步阻塞的（网络 IO + 本地 embedding）。写成 async def 会把它
+# 直接跑在事件循环线程上，一个慢请求就卡死【所有】并发请求。
+# 写成普通 def，FastAPI 会自动丢进线程池执行，不阻塞事件循环。
+# 配合 Day44 的 thread-local 连接：线程池默认 40 线程 = 最多 40 个 SQLite
+# 连接，可控且被复用，正好接上 Day44 讲的"连接不能每次新建也不能全局共享"。
 @app.post("/chat", response_model=ChatResponse)
-def chat(req: ChatRequest):
-    """问答接口：收到问题 → 跑 RAG → 返回答案。"""
-    answer = rag_chain.invoke(req.question)
-    return ChatResponse(answer=answer)
+def chat(req: ChatRequest, request: Request):
+    trace_id = request.state.trace_id
+    answer_fn = STATE["answer_fn"]
+    if answer_fn is None:
+        raise HTTPException(503, detail="知识库未就绪，请稍后重试")
+
+    session_id = req.session_id or f"{req.user_id}:default"
+    t0 = time.perf_counter()
+    try:
+        result = answer_fn(req.question)
+    except Exception as e:                       # noqa: BLE001
+        # 关键：失败【也要落库】。只记成功的话，失败率永远是 0%，
+        # /stats 会给你一个岁月静好的假象。失败样本才是改进的原料。
+        latency = int((time.perf_counter() - t0) * 1000)
+        store.save_qa(
+            trace_id=trace_id, user_id=req.user_id, session_id=session_id,
+            question=req.question, answer="", status="error",
+            error=f"{type(e).__name__}: {e}"[:500], latency_ms=latency,
+        )
+        log.error("RAG 调用失败 trace=%s: %s", trace_id, e)
+        raise HTTPException(502, detail="上游模型调用失败，请稍后重试") from e
+
+    latency = int((time.perf_counter() - t0) * 1000)
+    cost = estimate_cost(result["prompt_tokens"], result["completion_tokens"])
+    conversation_id = store.save_qa(
+        trace_id=trace_id, user_id=req.user_id, session_id=session_id,
+        question=req.question, answer=result["answer"],
+        model=os.getenv("LLM_MODEL", "deepseek-chat"),
+        prompt_tokens=result["prompt_tokens"],
+        completion_tokens=result["completion_tokens"],
+        cost_usd=cost, latency_ms=latency, sources=result["sources"],
+    )
+    return ChatResponse(
+        answer=result["answer"], sources=result["sources"],
+        conversation_id=conversation_id, trace_id=trace_id, latency_ms=latency,
+    )
+
+
+@app.post("/feedback")
+def feedback(req: FeedbackRequest):
+    """收集用户点赞/点踩 —— 整个服务里最便宜、最有价值的一个接口。
+
+    攒下来的踩 → store.export_eval_set() 导成评测集 → Day48 pytest 回归
+    → Day58 CI 门禁。自己编的用例永远不如线上真实翻车的问题有价值。
+    """
+    try:
+        fid = store.save_feedback(req.conversation_id, req.rating, req.comment)
+    except ValueError as e:
+        raise HTTPException(422, detail=str(e)) from e
+    except Exception as e:                       # noqa: BLE001
+        # 外键约束拦下了不存在的 conversation_id（Day44 里 foreign_keys=ON 才生效）
+        raise HTTPException(404, detail="对话不存在") from e
+    return {"feedback_id": fid}
+
+
+@app.get("/stats")
+def stats(days: int = 7):
+    """运营看板：按天的请求数 / 失败率 / 成本 / 平均与 p95 延迟。
+
+    生产上这个接口要加鉴权（见 capstone/auth.py），别裸奔对外。
+    """
+    return {"days": days, "rows": store.daily_stats(days)}
+
+
+@app.get("/history")
+def history(user_id: str, limit: int = 20, before_id: int | None = None):
+    """按用户查历史，游标分页（Day44 讲过为什么不用 OFFSET）。"""
+    return {"items": store.get_history(user_id, limit=limit, before_id=before_id)}
 
 
 # ----------------------------------------------------------
-# 小结：
-# - FastAPI = Python 写 HTTP 接口最省事的框架，Pydantic 负责请求/响应的类型校验
-# - 重活（建库）放启动时做一次，请求只做轻活，是服务化的基本套路
-# - /docs 自动生成可交互文档，调试接口不用自己写前端
+# 小结（面试能直接讲的版本）：
+# 1. 启动逻辑放 lifespan，不放模块顶层：依赖挂了服务仍能起，/ready 返 503，
+#    运维看到的是"活着但未就绪"，而不是一个反复重启的容器。
+# 2. liveness(/health) 与 readiness(/ready) 必须分开：前者管重启、后者管流量，
+#    /health 里绝不能查数据库，否则依赖一抖就是重启风暴。
+# 3. trace_id 三处一致（响应头 + 日志 + 数据库），用户一投诉就能定位到那一次。
+# 4. 阻塞型 LLM 调用用 def 不用 async def，让 FastAPI 丢进线程池，
+#    否则一个慢请求卡死整个事件循环。
+# 5. 成功和失败【都要落库】。只记成功 = 失败率永远 0%，等于没有监控。
+# 6. Pydantic 的 max_length 是第一道成本防线，挡住超长 prompt。
+# 7. 兜底 exception_handler 只回 trace_id，不回堆栈（堆栈泄漏是安全问题）。
+# 8. /feedback 是数据飞轮入口：点踩 → 评测集 → 回归测试 → CI 门禁。
 #
-# 进阶（了解）：上传文档接口 /upload、流式返回（StreamingResponse 配 .stream()）、
-#              多用户会话隔离——用到再加。
+# 本文件不重复造的部分（各有归属，别平行造第二套）：
+# - 超时 / 重试 / 主备切换 → common.get_reliable_llm()（Day42），已在上面用了
+# - 鉴权 / 限流 / 文档级权限 → capstone/auth.py、capstone/permissions.py
+# - 流式返回 → Day36（StreamingResponse 配 chain.stream()）
+# - 容器化与部署 → Day45 / Day60
 #
-# 动手练习：加一个 /upload 接口，让用户上传 txt/pdf 后针对它问答
+# 动手练习：用 locust（Day66）压 /chat，观察 /stats 里的 p95 怎么变；
+#           再把并发调到线程池上限以上，看请求是排队还是超时。
 # ----------------------------------------------------------

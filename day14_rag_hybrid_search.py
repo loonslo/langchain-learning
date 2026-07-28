@@ -14,6 +14,13 @@ BM25 是经典的关键词检索，正好和向量互补。这节把两者合起
 
 依赖：pip install rank_bm25
 注意（langchain 1.x）：EnsembleRetriever 已从 langchain.retrievers 迁到 langchain_classic.retrievers。
+注意（2026-06）：langchain-community 仓库已归档停维护（官方 issue #674）。BM25Retriever
+  暂无独立包，仍从 community 导入可用，但简历/面试要能说清迁移方向：
+  主流集成 → 各自独立包（langchain-chroma / langchain-openai…），legacy → langchain-classic。
+
+★中文大坑：BM25Retriever 默认按【空格】分词，中文整句会被当成一个 token，
+  检索直接失效（本文件因为混了向量检索，坏了也看不出来——这更危险）。
+  生产必须传 preprocess_func（jieba 分词或字符 bigram），见下方代码。
 ==========================================================
 """
 
@@ -42,7 +49,13 @@ def build_retrievers(path="test_doc.txt"):
     vector_ret = vectorstore.as_retriever(search_kwargs={"k": 4})
 
     # 2) BM25 检索：靠关键词匹配，直接从 chunks 构建，不需要 embedding
-    bm25_ret = BM25Retriever.from_documents(chunks)
+    #    ★必须给中文传 preprocess_func：默认按空格分词，中文整句=1 个 token，检索失效。
+    #    这里用字符 bigram（零依赖）；要更准可换 jieba.lcut。
+    def _tok_zh(text: str) -> list[str]:
+        text = "".join(text.split())
+        return [text[i:i + 2] for i in range(len(text) - 1)] or [text]
+
+    bm25_ret = BM25Retriever.from_documents(chunks, preprocess_func=_tok_zh)
     bm25_ret.k = 4
 
     # 3) 混合检索：EnsembleRetriever 把两者结果按权重融合

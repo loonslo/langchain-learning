@@ -5,7 +5,7 @@ Day 21 · 造评测集（下）+ RAGAS 离线评估
 
 两件事收尾评测集，并第一次接业界标准工具：
 1. 补齐评测集：加【拒答题】（文档里根本没有的，模型该老实说"不知道"）和
-   【引用准确性】题，和 Day19 的事实+跨段落合并，凑到 25 条、覆盖 4 类题型（可继续扩到 30-50）。
+   【引用准确性】题，和 Day20 的事实+跨段落合并，凑到 25 条、覆盖 4 类题型（可继续扩到 30-50）。
    拒答题是测试背景的杀手锏——它直接量化"幻觉防得住吗"。
 2. 接 RAGAS：不再手写指标，用业界通用库自动跑出 faithfulness(忠实度)、
    answer_relevancy(答案相关性)、context_precision(上下文精度) 等分数。
@@ -57,7 +57,7 @@ EXTRA = [
 
 
 def load_or_build_full_set() -> list[dict]:
-    """合并 Day19 的基础集 + 本节补充集，写出 eval_set_full.json（评测线单一数据源）。"""
+    """合并 Day20 的基础集 + 本节补充集，写出 eval_set_full.json（评测线单一数据源）。"""
     base = Path("eval_set.json")
     if not base.exists():
         raise FileNotFoundError("先跑 day20_eval_dataset_build.py 生成 eval_set.json")
@@ -89,7 +89,7 @@ def run_ragas(dataset: list[dict]):
     rows = {"question": [], "answer": [], "contexts": [], "ground_truth": []}
     for case in dataset:
         if case["type"] == "refuse":
-            continue  # 拒答题不进 RAGAS（它评相关性/忠实度，拒答另用 day17 的拒答率指标）
+            continue  # 拒答题不进 RAGAS（它评相关性/忠实度，拒答另用 day18 的拒答率指标）
         q = case["question"]
         ctx = [d.page_content for d in retriever.invoke(q)]
         rows["question"].append(q)

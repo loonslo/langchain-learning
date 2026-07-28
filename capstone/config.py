@@ -16,7 +16,7 @@ ROOT = Path(__file__).resolve().parent.parent
 if str(ROOT) not in sys.path:
     sys.path.insert(0, str(ROOT))
 
-from common import get_llm, get_embeddings, ZH_SEPARATORS  # noqa: E402
+from common import get_llm, get_reliable_llm, get_embeddings, ZH_SEPARATORS  # noqa: E402
 
 # ---- 项目路径 ----
 HERE = Path(__file__).resolve().parent
@@ -32,6 +32,6 @@ CHUNK_SIZE = 300
 CHUNK_OVERLAP = 50
 TOP_K = 4
 
-__all__ = ["get_llm", "get_embeddings", "ZH_SEPARATORS",
+__all__ = ["get_llm", "get_reliable_llm", "get_embeddings", "ZH_SEPARATORS",
            "DOCS_DIR", "CHROMA_DIR", "DB_PATH", "EVAL_SET",
            "REPORT_PATH", "FAILURES_PATH", "CHUNK_SIZE", "CHUNK_OVERLAP", "TOP_K"]

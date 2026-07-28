@@ -4,16 +4,18 @@ Day 46 · 可观测深化 + 本地推理框架（Ollama）了解
 测试工程师转 AI 应用开发  ← 阶段4 工程化
 
 两件事：
-1. 可观测（深化 Day21）：上线后要能回答"哪条请求慢了/贵了/答错了"。
+1. 可观测（深化 Day22）：上线后要能回答"哪条请求慢了/贵了/答错了"。
    除了 LangSmith trace，最朴素的是给每次调用记一条结构化日志：
    时间、问题、耗时、token、是否出错。有这些字段才能做监控和告警。
 2. 本地推理框架 Ollama（只【了解】+ 跑一次）：把开源模型跑在自己机器上，
    数据不出门、没有 API 费。知道它怎么接即可，不深究推理加速原理。
 
-依赖：Ollama 部分需本机装 Ollama 并 `ollama pull qwen2.5`（没装会自动跳过）。
+依赖：Ollama 部分需 `pip install langchain-ollama`，本机装 Ollama 并 pull 过任一模型
+（型号不写死，自动取本机第一个；也可用环境变量 OLLAMA_MODEL 指定。缺任一条件会跳过并提示）。
 ==========================================================
 """
 
+import os
 import time
 import json
 from datetime import datetime
@@ -44,14 +46,33 @@ def logged_invoke(question: str, logfile="calls.log.jsonl") -> str:
 
 
 # ---------- 2. Ollama：本地跑开源模型（了解级，能接通即可）----------
+def pick_local_model() -> str | None:
+    """问本机 Ollama 服务要一份模型列表，取第一个。避免把型号写死在代码里。"""
+    import ollama
+
+    models = [m.model for m in ollama.Client().list().models]
+    print("  本机已有模型：", models or "(空)")
+    return os.getenv("OLLAMA_MODEL") or (models[0] if models else None)
+
+
 def try_ollama():
-    """如果本机装了 Ollama，就用本地模型答一句；没装则跳过。"""
+    """如果本机装了 Ollama，就用本地模型答一句；没装/没起服务则跳过并说明原因。"""
     try:
         from langchain_ollama import ChatOllama
-        local = ChatOllama(model="qwen2.5", temperature=0)
-        print("  Ollama 本地模型回答：", local.invoke("一句话说说什么是向量").content[:50])
-    except Exception as e:
-        print(f"  (没装 Ollama / langchain-ollama，跳过本地模型) {type(e).__name__}")
+    except ModuleNotFoundError:
+        print("  (跳过) 没装 SDK：pip install langchain-ollama")
+        return
+    try:
+        model = pick_local_model()
+    except Exception as e:  # 服务没起：ConnectionError
+        print(f"  (跳过) 连不上 Ollama 服务（默认 127.0.0.1:11434），先启动 Ollama。{type(e).__name__}")
+        return
+    if not model:
+        print("  (跳过) 服务在跑但没有模型：ollama pull qwen3:8b")
+        return
+
+    local = ChatOllama(model=model, temperature=0)
+    print(f"  [{model}] 回答：", local.invoke("一句话说说什么是向量").content[:50])
 
 
 if __name__ == "__main__":
@@ -65,7 +86,7 @@ if __name__ == "__main__":
 
 # ----------------------------------------------------------
 # 小结：
-# - 可观测三件套：trace（看单条调用每一步，Day21）+ 结构化日志（统计延迟/错误/成本）
+# - 可观测三件套：trace（看单条调用每一步，Day22）+ 结构化日志（统计延迟/错误/成本）
 #   + 指标告警（基于日志算 P95、错误率，超阈值报警）。
 # - Ollama：本地跑开源模型，数据不出门、零 API 费；接法和云模型几乎一样（换个 ChatXxx）。
 #   只需【了解】：知道 vLLM / TGI / SGLang 是"自托管时提升吞吐的推理框架"，用到再深入。

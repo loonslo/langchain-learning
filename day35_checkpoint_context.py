@@ -18,13 +18,29 @@ Day 35 · 状态持久化（checkpoint）+ 上下文管理
 """
 
 from langchain_core.tools import tool
-from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-from langchain_core.output_parsers import StrOutputParser
+from langchain_core.messages import HumanMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate
 from langgraph.graph import StateGraph, START, MessagesState
 from langgraph.prebuilt import ToolNode, tools_condition
 from langgraph.checkpoint.memory import InMemorySaver
-from common import get_llm
+import os
+from dotenv import load_dotenv
+
+load_dotenv()   # 读 .env 里的 DEEPSEEK_API_KEY
+
+
+# —— 内联 LLM 工厂：本文件自包含，不依赖 common.py，方便单独阅读 ——
+def get_llm(temperature: float = 0.0, model: str = "deepseek-chat", **kwargs):
+    """DeepSeek 对话模型（OpenAI 兼容）。temperature=0 → 输出可复现。"""
+    from langchain_openai import ChatOpenAI
+    return ChatOpenAI(
+        model=model,
+        api_key=os.getenv("DEEPSEEK_API_KEY"),
+        base_url="https://api.deepseek.com",
+        temperature=temperature,
+        **kwargs,
+    )
+
 
 llm = get_llm(temperature=0)
 
@@ -70,33 +86,110 @@ def demo_memory():
     print("  答：", r3["messages"][-1].content)
 
 
-# ============ 第二部分：上下文裁剪 + 摘要压缩 ============
-def compress_history(messages: list, keep_recent: int = 2) -> list:
-    """保留最近 keep_recent 条，更早的压成一条摘要 SystemMessage。"""
-    if len(messages) <= keep_recent:
-        return messages
-    old, recent = messages[:-keep_recent], messages[-keep_recent:]
-    text = "\n".join(f"{type(m).__name__}: {m.content}" for m in old)
-    summary = (ChatPromptTemplate.from_template(
-        "用一两句话概括下面这段对话历史，保留关键事实：\n{h}"
-    ) | llm | StrOutputParser()).invoke({"h": text})
-    print(f"  [压缩] {len(old)} 条旧消息 → 1 条摘要：{summary[:50]}...")
-    return [SystemMessage(content=f"对话历史摘要：{summary}")] + recent
+# ============ 第二部分：上下文管理（官方实现） ============
+# 原理（手写版做的事）：切旧/新消息 → LLM 概括旧的 → 摘要+新消息拼回去。
+# 生产直接用官方件，分两档：
+#   2a. trim_messages     —— 不调 LLM，按 token 预算裁掉最旧的。快、免费、会丢信息。
+#   2b. SummarizationNode —— 调 LLM 把旧消息压成摘要，带缓存不重复压。慢一点但保事实。
+#       需要 pip install langmem
+SAMPLE_HISTORY = [
+    HumanMessage(content="我叫小王，在学 RAG"),
+    AIMessage(content="好的小王，RAG 是检索增强生成"),
+    HumanMessage(content="我之前是做测试的"),
+    AIMessage(content="测试背景对 RAG 评测很有优势"),
+    HumanMessage(content="那我现在叫什么名字？"),
+]
+
+
+def demo_trim():
+    """2a. trim_messages：纯裁剪，无 LLM 调用。
+    演示用 token_counter=len（按"条数"算），确定性强、必触发裁剪；
+    真实场景换 count_tokens_approximately 按 token 预算算。
+    """
+    from langchain_core.messages import trim_messages
+
+    trimmed = trim_messages(
+        SAMPLE_HISTORY,
+        strategy="last",           # 从最新往回保留
+        max_tokens=3,              # token_counter=len 时，这里的单位就是"条"
+        token_counter=len,         # 每条算 1，即"最多留 3 条"
+        start_on="human",          # 裁完必须以 human 开头（OpenAI 系接口要求）
+        include_system=True,       # SystemMessage 永远保留
+    )
+    print(f"  {len(SAMPLE_HISTORY)} 条 → 裁剪后 {len(trimmed)} 条：")
+    for m in trimmed:
+        print(f"    保留 {type(m).__name__}: {m.content[:20]}")
+    ans = llm.invoke(trimmed).content
+    print("  问'我叫什么'，模型答：", ans[:50], "← '小王'在被裁掉的第 1 条里，答不上")
+
+
+def build_summary_app():
+    """2b. SummarizationNode：挂在模型节点前，超阈值自动摘要。"""
+    from typing import Any
+    from langmem.short_term import SummarizationNode
+    from langchain_core.messages.utils import count_tokens_approximately
+
+    class State(MessagesState):
+        context: dict[str, Any]        # SummarizationNode 的摘要缓存（避免每轮重复摘要）
+        summarized_messages: list      # 压缩后"喂给 LLM 的视图"，不覆盖完整历史
+
+    # 中文摘要 prompt：默认是英文的，且容易把"人名/身份"这类关键事实摘丢——显式要求保留。
+    # 注意预算关系：max_tokens 要 ≥ max_summary_tokens + 近期消息所需空间，
+    # 差值太小会触发 "Failed to trim messages..." 警告（塞不下近期消息，退回原始列表）。
+    initial_prompt = ChatPromptTemplate.from_messages([
+        ("placeholder", "{messages}"),
+        ("user", "用中文概括以上对话。务必保留：人名、身份背景、关键事实和决定。"),
+    ])
+    existing_prompt = ChatPromptTemplate.from_messages([
+        ("placeholder", "{messages}"),
+        ("user", "已有摘要：{existing_summary}\n"
+                 "结合新消息用中文更新摘要。务必保留：人名、身份背景、关键事实和决定。"),
+    ])
+
+    summarize = SummarizationNode(
+        model=llm,
+        token_counter=count_tokens_approximately,
+        max_tokens=512,                     # 压缩后喂给模型的总预算（摘要 128 + 近期消息 384）
+        max_tokens_before_summary=256,      # 历史超过这个数才触发摘要，否则原样通过
+        max_summary_tokens=128,             # 摘要本身的预算
+        initial_summary_prompt=initial_prompt,
+        existing_summary_prompt=existing_prompt,
+        output_messages_key="summarized_messages",  # 关键：写到单独的 key，messages 里仍是全量历史
+    )
+
+    def chat(state: State) -> dict:
+        # 模型只看压缩视图；完整历史由 checkpointer 持久化，两者分离是官方设计
+        return {"messages": [llm.invoke(state["summarized_messages"])]}
+
+    g = StateGraph(State)
+    g.add_node("summarize", summarize)
+    g.add_node("chat", chat)
+    g.add_edge(START, "summarize")
+    g.add_edge("summarize", "chat")
+    # 运行时若见 "Deserializing unregistered type ... RunningSummary" 提示：
+    # 是 checkpoint 序列化 langmem 摘要缓存的兼容性提醒，不影响功能，可忽略。
+    return g.compile(checkpointer=InMemorySaver())
 
 
 def demo_context():
-    history = [
-        HumanMessage(content="我叫小王，在学 RAG"),
-        AIMessage(content="好的小王，RAG 是检索增强生成"),
-        HumanMessage(content="我之前是做测试的"),
-        AIMessage(content="测试背景对 RAG 评测很有优势"),
-        HumanMessage(content="那我现在叫什么名字？"),
-    ]
-    print("原始历史 5 条 → 压缩（保留最近 2 条 + 摘要）：")
-    compressed = compress_history(history, keep_recent=2)
-    print(f"  压缩后 {len(compressed)} 条")
-    ans = llm.invoke(compressed).content   # 摘要里应保住"小王"
-    print("  问'我叫什么'，模型答：", ans[:50])
+    print("--- 2a. trim_messages（裁剪：丢信息换速度） ---")
+    demo_trim()
+
+    print("--- 2b. SummarizationNode（摘要：保事实控 token） ---")
+    try:
+        app = build_summary_app()
+    except ImportError:
+        print("  未安装 langmem，先跑：pip install langmem")
+        return
+    cfg = {"configurable": {"thread_id": "ctx-demo"}}
+    for q in ["我叫小王，在学 RAG", "我之前是做测试的",
+              "测试背景做 AI 评估有什么优势？", "那我现在叫什么名字？"]:
+        r = app.invoke({"messages": [HumanMessage(content=q)]}, cfg)
+        fed = len(r.get("summarized_messages", []))
+        print(f"  问：{q}")
+        print(f"    全量历史 {len(r['messages'])} 条，实际喂模型 {fed} 条")
+        print(f"    答：{r['messages'][-1].content[:50]}")
+    # 检验点：最后一问历史已超阈值被摘要，但摘要里保住了"小王"
 
 
 if __name__ == "__main__":
@@ -109,6 +202,10 @@ if __name__ == "__main__":
 # ----------------------------------------------------------
 # 小结：
 # - checkpointer 按 thread_id 存每步 state 快照——多轮记忆 + 中断恢复都靠它，比 day04 手拼干净。
-# - 上下文管理：留最近 N 轮 + 旧消息摘要，控 token、不超窗；别把名字/关键决定摘掉。
-# - 动手练习：把 InMemorySaver 换 SqliteSaver 落盘重启验证；keep_recent 改 1 看摘要还保不保得住"小王"。
+# - 上下文管理不用手写：裁剪用 trim_messages（免费丢信息），摘要用 langmem SummarizationNode
+#   （花一次 LLM 调用保事实）。选型标准：历史里有"必须记住的事实"（名字/决定）就用摘要。
+# - 官方设计的关键：完整历史(messages) 和 喂模型的视图(summarized_messages) 分离，
+#   checkpointer 存全量，模型只看压缩版——审计/回放不丢数据。
+# - 动手练习：把 InMemorySaver 换 SqliteSaver 落盘重启验证；
+#   把 max_tokens_before_summary 调小到 64，看第 2 轮就触发摘要后"小王"还在不在。
 # ----------------------------------------------------------

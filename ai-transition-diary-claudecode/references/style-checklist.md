@@ -32,18 +32,21 @@ Goal: a beginner can follow it and learn one thing. Teach plainly — do not log
 
 ## Images
 
-- **No code blocks in images.** Full code lives only in the Word attachment. Images show framework / flow logic only: framed boxes, short labels, arrows, flow.
+- **No raw source listings in images.** Full code lives only in the Word attachment. Images show framework / flow logic: framed boxes, short labels, arrows, and flow. Exact function/API names and one short call signature are allowed only to map a node to the source; never paste a multi-line implementation.
 - **Fade vs highlight:** reused stages → muted gray + `沿用` tag; today's new/changed focus → vivid accent + `今天新增` / `今天重点` tag. Drive this from the `今昨代码差异` classification.
-- Standard set: cover, 定位图 (pipeline with reused faded / today highlighted), 前后对比图 (concrete before→after result), one flow card per new method, and a final 关键知识点小词典 (glossary) card listing the day's key terms — including the precise API/class names — each with a one-line plain definition.
+- Standard set: cover, 定位图 (pipeline with reused faded / today highlighted), 前后对比图 (concrete before→after result), a mandatory vertical 源码结构图解, optional non-duplicate method cards, at least one mandatory horizontal code flowchart, and a final 关键知识点小词典 (glossary) card listing the day's key terms — including the precise API/class names — each with a one-line plain definition.
+- **源码结构图解:** select `branch_loop`, `linear`, or `equivalence` from the actual source shape. Show the real function/API name, node roles, decision labels, branch meanings, return loops, and a compact 3-5 step explanation or mapping area. Use `equivalence` only when the shared internal structure is supported by supplied code or authoritative documentation; otherwise mark the claim `待核实`. A first-time reader should be able to trace execution from entry to exit without reading the Word attachment.
+- **横版代码流程图（每次必出）:** generate at least one 1560×1075 chart from today's changed/new code. Use one chart per meaningful function or distinct execution path, normally 1–4. Draw real node/function/API names, branch labels, loops, retries, tool calls, fallbacks, and error exits when present. When the source is linear, draw the true end-to-end input → processing/API calls → output path; linear code is never a reason to omit the horizontal chart.
+- Horizontal flowcharts supplement the vertical set. Omit a method card when it would repeat the same mechanism, but never omit the horizontal chart. Official order is vertical content cards except glossary → horizontal flowcharts → glossary. The contact sheet is QA-only.
 - Cover: top-left chip `转行日记 · DayN`; the handle `@测试阿甲` immediately to its right (not pinned to the edge). Fill the lower area with a small idea-flow band; avoid large empty space.
-- Every content image: a faint `@测试阿甲` signature in a corner.
+- Every content image, including every horizontal flowchart: a faint `@测试阿甲` signature in a corner.
 - Do not show internal labels (`图片2`, `配图方案`, `封面图`). Do not show `DayN` on content images; the cover may.
 - Do not show writing or production mechanics in images, especially lines like `正文里少放 API 名`, `正文里尽量少放术语`, `这里把名字放一起`, `代码放在附件`, or `图片计划`. Image copy must describe the day's topic itself: what the terms help compare, judge, debug, remember, or use.
 - Vertical 3:4, off-white grid paper, dark gray text. Distinct per-box colors (blue / teal / green) so blocks separate clearly; reserve a red/green two-color contrast for the before/after card only.
 - **No white box nested inside a colored card.** Emphasize a line with a short left accent bar, not a white inner box.
 - Vertically center each box's title+text block within the box; never top-align leaving a large empty lower half.
 - Title: measure with the final font; one line when it fits, wrap dynamically only when it overflows; never a fixed forced newline.
-- Preview every image at phone-readable scale before returning paths.
+- Preview every image at phone-readable scale before returning paths. Also inspect every individual horizontal flowchart at original resolution; a contact sheet alone is insufficient.
 
 ## Word Attachment
 
@@ -69,17 +72,18 @@ Goal: a beginner can follow it and learn one thing. Teach plainly — do not log
 ## Final Check
 
 - Title, body, cover copy, and images describe the same main thread.
-- The image set ends with a 关键知识点小词典 (glossary) card; the body reads like real speech (no essay tone, no 成语/四字格 filler).
+- The image set contains at least one horizontal code flowchart and ends with a 关键知识点小词典 (glossary) card; the body reads like real speech (no essay tone, no 成语/四字格 filler).
 - A reader who has not seen the code can tell what it does, why it matters, and what they can learn — from the body, not only the images.
 - The main thread comes from today's changed or new code.
 - Body follows Why → What → How → 收尾; every term has a plain-language translation; no banned voice phrases; no `第一招/第二招` enumeration; no cold-open example.
 - Body is plain text: no code fences, backticks, or indented code anywhere; wording is colloquial with minimal jargon (only the day's unavoidable topic names kept).
 - Body is under 900 characters and has been re-read end to end for coherence (clear setup, resolvable pronouns, spoken-aloud sentences, no logic gaps); anything awkward or confusing was rewritten.
-- Images contain no code blocks. Fading/highlighting matches the `今昨代码差异` classification (`沿用` gray, today's focus highlighted).
+- Images contain no raw multi-line code. The mandatory vertical source-logic card and mandatory horizontal flowchart trace real execution paths, and fading/highlighting matches the `今昨代码差异` classification (`沿用` gray, today's focus highlighted).
 - Images contain no meta-explanations about how the post was written or why terms are placed in an image; every line is reader-facing and topic-specific.
 - The before/after card shows a concrete result (e.g. 漏了 vs 命中).
 - No white box nested in a colored card; emphasis uses a left accent bar. Text is vertically centered in its box.
-- Cover shows `转行日记 · DayN` + `@测试阿甲`; every content image carries the faint `@测试阿甲` signature.
+- Cover shows `转行日记 · DayN` + `@测试阿甲`; every content image, including horizontal flowcharts, carries the faint `@测试阿甲` signature.
+- Every horizontal flowchart passed the renderer audit and individual original-resolution review: title clears the top flow lane, diamond text stays inside the diamond, edge labels clear nodes/arrows, arrows do not cross unrelated nodes, and both lower panels stay within their frames.
 - Every element stays inside its parent and the outer frame with visible padding; nothing clipped or touching an edge.
 - When two Python files are supplied, copy and images are completed in one run unless the user requested copy review first or no images.
 - The final draft contains verified image paths, the Word attachment path, and an updated completion status; the body ends with the fixed attachment notice.

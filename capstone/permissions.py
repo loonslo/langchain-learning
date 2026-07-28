@@ -77,7 +77,7 @@ def permission_chain(kb, user: User):
         "上下文：\n{context}\n\n问题：{question}")
     return ({"context": (lambda q: kb._format(retriever.invoke(q))),
              "question": RunnablePassthrough()}
-            | prompt | C.get_llm() | StrOutputParser())
+            | prompt | C.get_reliable_llm() | StrOutputParser())
 
 
 if __name__ == "__main__":

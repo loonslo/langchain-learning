@@ -13,5 +13,5 @@ COPY . .
 # 服务监听端口
 EXPOSE 8000
 
-# 启动 Day35 的 FastAPI 服务
+# 启动 Day41 的 FastAPI 服务
 CMD ["uvicorn", "day35_serve_fastapi:app", "--host", "0.0.0.0", "--port", "8000"]

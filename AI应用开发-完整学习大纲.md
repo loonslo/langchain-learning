@@ -384,3 +384,42 @@
 ### 简历 JD 关键词清单（确保每个都能讲清）
 
 RAG、Agent、LangChain / LangGraph、Tool Calling、**Text2SQL**、Prompt Engineering、**Context Engineering**、**MCP**、**agent harness / harness engineering**、**agentic loop / ReAct**、RAGAS / DeepEval / 评测 / 幻觉率、agent 轨迹评测、CI 评测门禁、文档级权限 / 多租户、**成本优化（缓存/路由）**、LLMOps / 可观测、pytest 回归、LoRA 微调取舍、LlamaIndex / AutoGen（了解级）。
+
+---
+
+## 10. 补充包（Day72+）：Day1–33 缺口回填（不改历史 day）
+
+> 复盘 Day1–33 后，把成体系的知识缺口以【新增 day】追加在此，**不动已发布的历史 day**（保持转行日记发布节奏）。编号接在求职材料（Day67–71）之后，作为独立"补充 / 进阶包"。
+
+| Day | 主题 | 补的缺口 | 承接 / 区别 | 状态 |
+|-----|------|---------|------------|------|
+| 72 | 长期记忆 Store（跨会话） | checkpointer 只管单会话；跨会话"记住用户"缺失 | 承 Day35，用 `langgraph.store` | ✅ 已建·实测通过 |
+| 73 | checkpointer 落盘 SqliteSaver | Day35 全程 InMemorySaver（重启即丢） | 承 Day35；区别于 Day44（应用库） | ✅ 已建·实测通过 |
+| 74 | Text2SQL 加固 | Day38 基础版缺 参数化 / 超时 / 只读连接 | 承 Day38 | ✅ 已建·实测通过 |
+| 75 | 子图 subgraph 组合 | 大项目复用 / 独立测 / 分工，全库零覆盖 | 承 Day39；capstone 用得上 | ✅ 已建·实测通过 |
+| 76 | 面试话术速查·护城河合集 | 前段（RAG7–17 / 评测18–26）面试话术几乎为零 | 汇总 Day7–26 | ✅ 已建·实测通过 |
+| 77 | 提示工程进阶（zero/few-shot/CoT 对比） | 阶段0 明确【动手】却无专门 day（仅 Day06 附带） | 补 Day1–6 | ✅ 已建·实测通过|
+| 78 | Context Engineering 统一 | Day17 重排 + Day35 压缩分散，缺统一讲裁剪/压缩/排序/token 预算 | 强化 Day17/35 | ✅ 已建·实测通过|
+
+> 环境：补充包代码均在 `.venv`（langgraph 1.2.8）下实测跑通、无需额外 API key。Day73 需 `pip install langgraph-checkpoint-sqlite`（已装）。
+
+---
+
+## 11. 可选补充：AI 自动化测试 backup（Day79–88）
+
+> **本节不改变 AI 应用开发主线，也不作为主线毕业的前置条件。**它用于拓宽 AI 自动化测试 / AI 质量岗位的投递范围。评估是其中的核心，但测试边界会扩展到确定性组件、RAG、Agent、API/流式协议、安全、韧性、性能、CI 和线上 badcase 闭环。
+
+| Day | 主题 | 核心产物 | 状态 |
+|-----|------|----------|------|
+| 79 | AI 测试策略与风险建模 | 测试范围、风险矩阵、指标与门禁分级 | ⬜ 待学 |
+| 80 | 评估集与测试数据工程 | 版本化 schema + 50 条以上分层用例 | ⬜ 待学 |
+| 81 | mock、契约与不变量测试 | 无 API key 的 unit / contract suite | ⬜ 待学 |
+| 82 | RAG 自动化测试 | 召回、生成、引用分层报告与失败归因 | ⬜ 待学 |
+| 83 | LLM-as-judge 校准 | 人工一致性、偏差与阈值报告 | ⬜ 待学 |
+| 84 | Agent 自动化测试 | 真实轨迹、工具/参数/顺序/副作用断言 | ⬜ 待学 |
+| 85 | AI API、流式与 E2E | FastAPI/SSE/鉴权/多租户端到端套件 | ⬜ 待学 |
+| 86 | 安全、韧性与性能 | 对抗、故障注入、Locust 与 SLO 报告 | ⬜ 待学 |
+| 87 | CI 分层门禁与防 flaky | PR smoke + nightly + release gate | ⬜ 待学 |
+| 88 | 线上闭环与可选整合 | badcase 回流和一次量化改进复盘 | ⬜ 待学 |
+
+按目标 JD 选学即可，不要求十天全部完成。详细学习内容、验收标准和可选的 capstone 增强项见 [`AI自动化测试专项学习大纲.md`](AI自动化测试专项学习大纲.md)。
