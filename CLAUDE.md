@@ -56,6 +56,7 @@ python capstone/main.py eval                         # Run evaluation + report
 ```bash
 pytest day48_pytest_regression.py -v                 # RAG regression tests
 pytest capstone/test_regression.py -v                # Capstone regression tests
+pytest test_day47.py -v                              # Security guardrails (injection detection, PII masking, secret scrubbing)
 pytest test_day44.py -v                              # SQLite data layer (injection, WAL concurrency, migration)
 pytest test_day41.py -v                              # FastAPI service (fake RAG, no LLM/API key needed)
 ```
@@ -65,6 +66,14 @@ pytest test_day41.py -v                              # FastAPI service (fake RAG
 python day66_loadtest_locust.py --fake --users 20 --time 30s --upstream-ms 800   # fake upstream, no API cost, CI-safe
 python day66_loadtest_locust.py --host http://127.0.0.1:8000 --users 10 --time 60s  # against real service
 locust -f day66_loadtest_locust.py --host http://127.0.0.1:8000                   # interactive UI
+```
+
+### LoRA fine-tuning (regression gate, exit code 1 if adapter is not better than base)
+```bash
+python day49_lora_finetune.py --smoke                                   # tiny model, CPU seconds, flow only, no quality assertion
+python day49_lora_finetune.py                                           # Qwen2.5-0.5B-Instruct, ~4min on CPU; base-vs-adapter gate
+python day49_lora_finetune.py --base <path-or-repo> --epochs 20         # HF_ENDPOINT=https://hf-mirror.com if HF is unreachable
+python day49_lora_finetune.py --export-llamafactory                     # emit equivalent LLaMA-Factory dataset + YAML (no training)
 ```
 
 ### Services
