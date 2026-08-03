@@ -1,0 +1,3 @@
+-r requirements.txt
+
+langchain-aws==1.6.4

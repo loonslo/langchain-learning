@@ -1,0 +1,7 @@
+-r requirements.txt
+
+httpx==0.28.1
+langgraph-checkpoint-sqlite==3.1.0
+locust==2.46.2
+pytest==9.0.3
+ruff==0.15.15

@@ -1,71 +1,122 @@
 """
-Day 50 · 认知层：RAG / Prompt / 微调 怎么选 + 大模型 5 类输出
+Day 50 · 从需求约束选择 Prompt / RAG / 微调
 ==========================================================
-测试工程师转 AI 应用开发  ← M9 认知层（以【了解】为主，别陷进去）
+三者不是互斥产品，也没有固定的成本排序：
 
-面试常问"这个需求你用 RAG、prompt 还是微调？"。这不是技术活，是判断力。
-本节把决策标准写成一个小函数（讲清逻辑），再速览大模型的 5 类输出方式。
+- Prompt 定义当前任务、边界和输出契约，但不会可靠地补齐模型不知道的私有知识。
+- RAG 在推理时注入外部知识，适合知识会变化、需引用或需按权限取数的场景。
+- 微调主要改变稳定行为、格式或领域模式；它不是动态知识库，也不天然提供引用。
 
-核心口诀：
-- 知识常更新、要溯源、成本敏感 → RAG
-- 只是想调输出风格/格式、需求简单 → 先试 Prompt（最便宜）
-- 要固定风格/术语/领域口吻，且知识相对静态、预算够 → 才考虑微调
-一句话：能 Prompt 不 RAG，能 RAG 不微调——从便宜的开始试。
+生产选型从可验证的业务目标开始：质量、时延、吞吐、权限、更新频率和总拥有成本，
+再用离线评测与线上观测决定是否增加 RAG 或微调，而不是套一句固定口诀。
 ==========================================================
 """
 
+from dataclasses import dataclass
+from enum import Enum
 
-def recommend(knowledge_updates_often: bool, need_citation: bool,
-              need_fixed_style: bool, budget_for_training: bool) -> str:
-    """根据几个关键问题给出建议方案（决策逻辑，不是标准答案）。"""
-    if knowledge_updates_often or need_citation:
-        # 知识会变 / 要给出处 → 微调搞不定（训完知识就固化了），用 RAG
-        base = "RAG：知识可随时更新、答案可溯源、成本低"
-    elif need_fixed_style and budget_for_training:
-        base = "微调：要稳定的风格/术语/领域口吻，且能承担训练成本与维护"
+
+class Strategy(str, Enum):
+    PROMPT = "Prompt"
+    RAG = "RAG"
+    FINE_TUNING = "微调"
+    RAG_AND_FINE_TUNING = "RAG + 微调"
+
+
+@dataclass(frozen=True)
+class Decision:
+    """可记录、可评审的技术选型结果。"""
+
+    strategy: Strategy
+    reasons: tuple[str, ...]
+    production_checks: tuple[str, ...]
+
+    def summary(self) -> str:
+        return f"{self.strategy.value}：{'；'.join(self.reasons)}"
+
+
+def decide(
+    *,
+    knowledge_updates_often: bool,
+    need_citation: bool,
+    model_lacks_required_knowledge: bool,
+    need_fixed_behavior: bool,
+    enough_training_examples: bool,
+    training_is_feasible: bool,
+) -> Decision:
+    """根据需求约束给出起始方案；最终结论仍须由评测数据验证。"""
+    needs_retrieval = (
+        knowledge_updates_often
+        or need_citation
+        or model_lacks_required_knowledge
+    )
+    can_fine_tune = (
+        need_fixed_behavior and enough_training_examples and training_is_feasible
+    )
+
+    if needs_retrieval and can_fine_tune:
+        strategy = Strategy.RAG_AND_FINE_TUNING
+        reasons = ("外部知识需在推理时更新/溯源", "有足够样本固化稳定行为")
+    elif needs_retrieval:
+        strategy = Strategy.RAG
+        reasons = ("答案依赖模型外部知识、更新或引用",)
+    elif can_fine_tune:
+        strategy = Strategy.FINE_TUNING
+        reasons = ("目标是稳定行为且已有足够高质量训练样本",)
     else:
-        base = "Prompt 工程：需求不复杂时最便宜最快，先把它榨干再说"
-    return base
+        strategy = Strategy.PROMPT
+        reasons = ("暂不需要外部知识或训练，先建立最小可评测基线",)
 
-
-# 三者也常组合：用 RAG 供知识 + 微调定风格 + 好 prompt 收口。
-COMBO_NOTE = "实战常组合：RAG 管'知道什么' + 微调管'怎么说' + Prompt 管'这次怎么答'"
-
-
-def show_output_modes():
-    """大模型 5 类输出/交互方式（你前面都动过手，这里成体系记一遍）。"""
-    modes = [
-        ("普通文本", "直接返回字符串", "day01"),
-        ("流式 stream", "边生成边吐字，改善等待体验", "day02/day29"),
-        ("结构化 JSON", "with_structured_output 拿到可解析对象", "day03"),
-        ("函数调用 tool-calling", "模型决定调用哪个工具", "day05/day25"),
-        ("多模态", "图片/音频等非文本输入", "day16"),
+    checks = [
+        "用代表性评测集比较质量、拒答和引用正确率",
+        "测量 p95 时延、吞吐和单次请求总成本",
+        "私有知识在检索前执行租户与文档权限过滤",
     ]
-    for name, desc, where in modes:
-        print(f"  - {name}：{desc}（见 {where}）")
+    if can_fine_tune:
+        checks.append("保留基座模型对照组，并验证数据许可、漂移与回滚")
+    return Decision(strategy, reasons, tuple(checks))
+
+
+def recommend(
+    knowledge_updates_often: bool,
+    need_citation: bool,
+    need_fixed_style: bool,
+    budget_for_training: bool,
+    enough_training_examples: bool = False,
+) -> str:
+    """兼容原教学接口；预算和高质量训练样本是两项独立前提。"""
+    decision = decide(
+        knowledge_updates_often=knowledge_updates_often,
+        need_citation=need_citation,
+        model_lacks_required_knowledge=knowledge_updates_often,
+        need_fixed_behavior=need_fixed_style,
+        enough_training_examples=enough_training_examples,
+        training_is_feasible=budget_for_training,
+    )
+    return decision.summary()
+
+
+OUTPUT_DIMENSIONS = (
+    ("内容", "文本、图片、音频等模态"),
+    ("传输", "一次性响应或流式传输"),
+    ("契约", "自由文本或经 schema 校验的结构化数据"),
+    ("动作", "只返回内容，或提出需由应用校验并执行的工具调用"),
+)
+
+
+def show_output_modes() -> None:
+    """输出能力是可组合维度，不是五个互斥类别。"""
+    for name, description in OUTPUT_DIMENSIONS:
+        print(f"  - {name}：{description}")
 
 
 if __name__ == "__main__":
     print("===== 方案决策示例 =====")
     print("企业知识库问答（知识常更新、要溯源）：")
     print("  →", recommend(True, True, False, False))
-    print("客服要统一品牌口吻（知识静态、有预算）：")
-    print("  →", recommend(False, False, True, True))
+    print("客服要统一品牌口吻（知识静态、有预算且有高质量样本）：")
+    print("  →", recommend(False, False, True, True, True))
     print("把回答改成更口语（需求简单）：")
     print("  →", recommend(False, False, False, False))
-    print("\n", COMBO_NOTE)
-
-    print("\n===== 大模型 5 类输出方式 =====")
+    print("\n===== 大模型输出的可组合维度 =====")
     show_output_modes()
-
-
-# ----------------------------------------------------------
-# 小结：
-# - 选型从便宜到贵：Prompt → RAG → 微调；越往后越贵、越难维护，能不用就不用。
-# - RAG vs 微调最硬的分水岭：知识要不要常更新、要不要溯源——要，就 RAG。
-# - 这是【了解】级判断题，面试能讲清逻辑即可，别真去训一堆模型（那是另一个岗位）。
-#
-# 面试话术：
-#   "我默认先 Prompt，搞不定上 RAG，只有需要稳定风格且知识静态才考虑微调；
-#    企业知识库这种知识常变又要溯源的，必然 RAG，微调反而帮倒忙。"
-# ----------------------------------------------------------
