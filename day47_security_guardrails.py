@@ -27,8 +27,8 @@ Day 47 · 安全护栏：信任边界 + PII 脱敏 + 密钥管理
   4. require_env / scrub_secrets —— 密钥可执行地管起来
   5. guard          —— 串起来，可直接接 FastAPI
 
-不在本文件的部分：输出侧内容审核见 Day64，工具调用的人工确认见
-capstone/agent.py，按人过滤检索见 Day55。回归测试见 test_day47.py。
+不在本文件的部分：项目输出审核见 capstone/content_safety.py，工具调用的持久化审批见
+capstone/approval.py，按人过滤检索见 capstone/permissions.py。回归测试见 test_day47.py。
 ==========================================================
 """
 
@@ -242,8 +242,8 @@ if __name__ == "__main__":
 # - 安全规则必须有回归测试：每加一条规则都可能误伤另一条，见 test_day47.py。
 #
 # 这一层之外生产还需要（本文件不覆盖）：
-#   输出侧内容审核 Day64 / 按人过滤检索 Day55 / 速率限制与配额 Day56
-#   / 工具白名单 + 人工确认 capstone/agent.py / 云内容安全 API 做语义兜底。
+#   输出侧内容审核 capstone/content_safety.py / 按人过滤检索 capstone/permissions.py
+#   / 速率限制 capstone/auth.py / 工具白名单 + 持久化人工审批 capstone/approval.py。
 #
 # 怎么接进服务：在 Day41 的 /chat 里 d = guard(q)，action=="block" 直接返回提示；
 # 日志只写 d["safe_question"]，异常信息先过 scrub_secrets，回复前 restore_pii。

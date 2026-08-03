@@ -2,7 +2,7 @@
 
 > 循序渐进的每日代码：从"问一次"到"能查文档、能评测、能上线"，一天一个核心概念。
 > 每个文件开头有「这天学什么」，关键行有注释，能独立运行。
-> 核心课程 Day1-71 建立 AI 应用开发与评测底座；Day72+ 为补充包。Day79-88 是可选的 AI 自动化测试 backup 路线，不改变 AI 应用开发主线。
+> 核心课程 Day1–50 建立 AI 应用开发与评测底座；Day51–78 连续开发一个生产导向项目。Day79–88 是可选的 AI 自动化测试 backup 路线。
 
 ## 环境
 
@@ -38,10 +38,9 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 工程化阶段（Day41+）还需要：`pip install fastapi uvicorn pytest`
 企业 / 上线阶段（Day56/63/66）还需要：`pip install "python-jose[cryptography]" langchain-postgres "psycopg[binary]" locust`
 
-## 课程地图（Day1-71，文件名即 dayNN）
+## 课程地图（Day1-78）
 
-> 阶段5-7 的整合单元是 `dayNN` 驱动文件，复用 `capstone/` + `evals/` 模块（不重复造）。
-> 求职天（Day67-71）是 `dayNN_*.md`。
+> Day1–50 使用独立练习文件建立基础；Day51–78 使用“每日完整变更集”推进同一个项目。README 记录当天完整结构，未修改文件不重复复制，并可用 `tools/materialize_day.py` 还原任意一天。
 
 ### 阶段0 固本 + 裸写 harness（Day1-11）
 
@@ -123,43 +122,24 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 | 49 | `day49_lora_finetune.py` | 微调取舍 + 跑一次 LoRA |
 | 50 | `day50_concept_overview.py` | 量化/蒸馏/Flash Attention/5 类输出 扫盲 |
 
-### 阶段5 毕业项目整合 + 企业第一梯队 + 真上线（Day51-61）
+### 阶段5：一个项目的完整开发过程（Day51-78）
 
-> 代码主体在 `capstone/`，每个 dayNN 是"这天做哪块"的驱动/说明。
+> Day51 起连续开发同一个“企业客服与工单 Copilot”。每个 `dayNN/` 只保存当天新增或修改的完整文件；当天 README 同时记录项目完整结构，并标明新增、修改、继承但不涉及的文件。
 
-| Day | 文件 | 概念 |
-|-----|------|------|
-| 51 | `day51_project_skeleton.py` | 项目架构 + Git 协作工作流 |
-| 52 | `day52_capstone_rag_eval.py` | RAG + Chroma + 评测接入（真实语料）|
-| 53 | `day53_capstone_agent.py` | Agent + MCP + HITL + agent 评测接入 |
-| 54 | `day54_incremental_sync.py` | 真实数据接入 + 增量同步（→ `capstone/connector.py`）|
-| 55 | `day55_doc_permissions.py` | 文档级权限过滤·检索层（→ `capstone/permissions.py`）|
-| 56 | `day56_auth_multitenant.py` | 认证 + 多租户 + 限流（→ `capstone/auth.py` / `api_enterprise.py`）|
-| 57 | `day57_engineering_integration.py` | 工程化接入清单 |
-| 58 | `day58_ci_gate.py` ★ | CI 评测门禁（→ `capstone/ci_gate.py` + `.github/workflows/eval-gate.yml`）|
-| 59 | `day59_e2e_improvement_loop.py` | 端到端联调 + 一轮改进闭环 |
-| 60 | `day60_deploy.py` | 真部署拿公网地址（详见 `capstone/DEPLOY.md`）|
-| 61 | `day61_github_polish.py` | GitHub 打磨清单 |
+| Day | 学习入口 | 当天真实交付 | 状态 |
+|-----|----------|--------------|------|
+| 51 | [`day51/README.md`](day51/README.md) | src 布局、本地 FAQ RAG、拒答、真实来源 | 完成 |
+| 52–60 | [`Day52`](day52/README.md) → [`Day60`](day60/README.md) | 多文档、评测、混合检索、会话、LangGraph、订单、重试、人工、SQLite | 完成 |
+| 61–69 | [`Day61`](day61/README.md) → [`Day69`](day69/README.md) | API、幂等、身份、增量同步、注入、PII、观测、缓存、质量门 | 完成 |
+| 70–78 | [`Day70`](day70/README.md) → [`Day78`](day78/README.md) | 容器、存储迁移、容量、反馈、fallback、恢复、集成、面试证据、验收 | 完成 |
 
-### 阶段6 上线补全（Day62-66）
+将数字替换成 51–78 中任意一天，即可还原该日结束时的完整项目：
 
-| Day | 文件 | 概念 |
-|-----|------|------|
-| 62 | `day62_monitoring_alerting.py` | 生产监控 p95/p99 + 告警（+ `capstone/monitoring.py`）|
-| 63 | `day63_pgvector_store.py` | 生产级向量库 pgvector |
-| 64 | `day64_content_safety.py` | 内容安全 / 合规审核 |
-| 65 | `day65_provider_abstraction.py` | 模型供应商抽象（OpenAI/Azure/Bedrock）|
-| 66 | `day66_loadtest_locust.py` | locust 压测 + OpenAPI /v1 |
+```powershell
+.\.venv\Scripts\python.exe tools\materialize_day.py 78
+```
 
-### 阶段7 求职冲刺（Day67-71，markdown）
-
-| Day | 文件 | 概念 |
-|-----|------|------|
-| 67 | `day67_resume.md` | 简历 + 求职定位 |
-| 68 | `day68_interview_rag_agent.md` | 面试题：RAG / Agent / 评测 |
-| 69 | `day69_interview_enterprise.md` | 面试题：工程 / 企业 / 上线 |
-| 70 | `day70_project_pitch.md` | 5 分钟项目讲解 |
-| 71 | `day71_mock_interview.md` | 模拟面试 + 复盘 |
+生成结果位于 `.build/day78/customer-support/`。每个 Day 只保存当日变更，完整结构和精确代码搜索目标记录在当天 README 中。
 
 ### 可选补充：AI 自动化测试 backup（Day79-88，规划中）
 
@@ -180,11 +160,12 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 
 ### 整合作品 `capstone/`（毕业项目主体）
 
-企业知识库 Agent + 自动化评测平台，端到端。详见 `capstone/README.md`。
+多租户企业客服与工单 Copilot，端到端。详见 `capstone/README.md`。
 核心模块：`knowledge_base.py`（混合检索+溯源）、`connector.py`（增量同步）、
-`permissions.py`（文档级权限）、`auth.py`（JWT+多租户+限流）、`agent.py`（Agent+HITL）、
+`permissions.py`（文档级权限）、`auth.py`（JWT+多租户+限流）、`service.py`（统一编排）、
+`approval.py`（持久化审批）、
 `evaluation.py` + `ci_gate.py`（评测+门禁）、`monitoring.py`（监控）、
-`api.py` / `api_enterprise.py`（服务）、`test_regression.py`（回归）。
+`api_enterprise.py`（唯一 HTTP 服务）、`test_production.py`（生产边界回归）。
 
 ### 评测平台 `evals/`（阶段2 可单独展示）
 

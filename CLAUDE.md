@@ -4,20 +4,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Chinese-language LangChain learning curriculum (Day1-71) for a test engineer transitioning to AI application development. Covers RAG, evaluation (护城河 speciality), LangGraph agents, engineering/deployment, and enterprise features. The capstone project is an enterprise knowledge base agent + automated evaluation platform.
+A Chinese-language LangChain learning curriculum for a test engineer transitioning to AI application development. Day1–50 are focused exercises; Day51–78 are one cumulative multi-tenant customer-service and ticket Copilot under `capstone/`.
 
 ## Architecture
 
 ```
 common.py                        # Shared backbone: LLM factory (DeepSeek), embedding cache, Chinese separators
-dayNN_*.py                       # 71 self-contained daily learning files, each importable from common.py
-capstone/                        # Graduation project: enterprise knowledge base + eval platform
+day01_*.py ... day50_*.py        # Focused prerequisite exercises
+day51_*.py ... day78_*.py        # Current cumulative-project task cards, not duplicate demos
+capstone/                        # Business implementation accumulated by Day51–78
   config.py                      #   Imports common.py, adds project paths (DOCS_DIR, CHROMA_DIR, DB_PATH etc.)
   knowledge_base.py              #   Hybrid retrieval (vector + BM25) + Chroma persistence + source citation
-  agent.py                       #   Tool-calling agent with HITL approval
+  service.py / contracts.py      #   One application path and stable request/result contracts
   evaluation.py / ci_gate.py     #   Automated eval metrics, report generation, CI quality gate
   test_regression.py             #   pytest regression tests (the key differentiator)
-  api.py / api_enterprise.py     #   FastAPI service / enterprise version with auth + multi-tenant
+  api_enterprise.py              #   FastAPI service with auth + multi-tenant boundaries
   auth.py / permissions.py       #   JWT auth, document-level permissions, rate limiting
   monitoring.py / connector.py   #   Production monitoring (p95/p99), data ingestion + incremental sync
   main.py                        #   CLI entry point (build / ask / eval)
@@ -31,9 +32,14 @@ reports/                         # Generated outputs: eval_runs.csv, failures.js
 
 ## Key Commands
 
-### Daily learning files
+### Day51–78 cumulative project
 ```bash
-python dayNN_filename.py         # Run any day's file directly
+cd day51
+$env:PYTHONPATH="src"; ..\.venv\Scripts\python.exe -m customer_support.cli --check-data
+..\.venv\Scripts\python.exe -m pytest -q       # Run Day51 focused acceptance tests
+python -m capstone.milestones 51             # Show one project event and its acceptance evidence
+python -m capstone.milestones --strict-evidence
+python -m capstone.project_baseline --json
 ```
 
 ### Evaluation platform (offline by default, no API key needed)
@@ -47,9 +53,9 @@ python -m evals.agent_trajectory_eval                # Agent trajectory evaluati
 
 ### Capstone project
 ```bash
-python capstone/main.py build                        # Build knowledge base from docs/
-python capstone/main.py ask "your question"          # Ask the knowledge base
-python capstone/main.py eval                         # Run evaluation + report
+python -m capstone.main build                        # Build knowledge base from docs/
+python -m capstone.main ask "your question"          # Ask the knowledge base
+python -m capstone.main eval                         # Run evaluation + report
 ```
 
 ### Testing (pytest is the primary test framework)
@@ -63,9 +69,9 @@ pytest test_day41.py -v                              # FastAPI service (fake RAG
 
 ### Load testing (SLO gate, exit code 1 on violation)
 ```bash
-python day66_loadtest_locust.py --fake --users 20 --time 30s --upstream-ms 800   # fake upstream, no API cost, CI-safe
-python day66_loadtest_locust.py --host http://127.0.0.1:8000 --users 10 --time 60s  # against real service
-locust -f day66_loadtest_locust.py --host http://127.0.0.1:8000                   # interactive UI
+python -m capstone.load_test --fake --users 20 --time 30s --upstream-ms 800
+python -m capstone.load_test --host http://127.0.0.1:8000 --users 10 --time 60s
+locust -f capstone/load_test.py --host http://127.0.0.1:8000
 ```
 
 ### LoRA fine-tuning (regression gate, exit code 1 if adapter is not better than base)
@@ -79,7 +85,7 @@ python day49_lora_finetune.py --export-llamafactory                     # emit e
 ### Services
 ```bash
 uvicorn day41_serve_fastapi:app --reload             # Day41 FastAPI service
-uvicorn capstone.api:app --reload                    # Capstone API (http://127.0.0.1:8000/docs)
+uvicorn capstone.api_enterprise:app --reload         # Capstone API (http://127.0.0.1:8000/docs)
 streamlit run capstone/app_streamlit.py              # Capstone Streamlit UI
 python day40_mcp_server_http.py                      # Day40 remote MCP server (streamable-http, :8000/mcp)
 ```

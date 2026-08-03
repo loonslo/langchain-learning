@@ -1,0 +1,4 @@
+[
+  {"id":"refund","question":"退款多久到账？","keywords":["3–5","工作日"],"sources":["refund.md"],"refuse":false},
+  {"id":"unknown","question":"黑金会员权益？","keywords":[],"sources":[],"refuse":true}
+]

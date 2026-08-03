@@ -13,32 +13,41 @@ capstone/ci_gate.py · CI 评测门禁（Day58）★最硬的作品点
 
 import sys
 
-import config as C
-from knowledge_base import KnowledgeBase
-from evaluation import run
+from .evaluation import run
+from .knowledge_base import KnowledgeBase
 
 # 质量门禁阈值（按你的评测集和业务容忍度定，进 git 可回溯）
 THRESHOLDS = {
-    "拒答正确率": 1.0,     # 该拒答的必须全拒答（防幻觉底线）
-    "关键词命中率": 0.7,   # 事实题至少答对 70%
-    "最多失败数": 3,       # 失败用例不超过 3 条
+    "拒答正确率": 1.0,  # 该拒答的必须全拒答（防幻觉底线）
+    "关键词命中率": 0.7,  # 事实题至少答对 70%
+    "引用正确率": 1.0,  # 期望来源必须来自真实召回记录
+    "最多失败数": 3,  # 失败用例不超过 3 条
+    "最少拒答样本": 1,
+    "最少事实样本": 1,
+    "最少引用样本": 1,
 }
 
 
 def _ratio(s: str) -> float:
-    """把评测返回的 'a/b' 解析成比率；'n/a' 当作满分（该类无样本）。"""
+    """把评测返回的 a/b 解析成比率；无样本不能伪装成满分。"""
     if s == "n/a":
-        return 1.0
+        return 0.0
     a, b = s.split("/")
     return int(a) / int(b) if int(b) else 1.0
 
 
 def gate() -> int:
-    kb = KnowledgeBase().build()
+    kb = KnowledgeBase().build(rebuild=True)
     metrics = run(kb)
     print("评测指标：", metrics)
 
     failures = []
+    if metrics["拒答样本数"] < THRESHOLDS["最少拒答样本"]:
+        failures.append("拒答评测样本不足")
+    if metrics["事实样本数"] < THRESHOLDS["最少事实样本"]:
+        failures.append("事实评测样本不足")
+    if metrics["引用样本数"] < THRESHOLDS["最少引用样本"]:
+        failures.append("引用评测样本不足")
     refuse = _ratio(metrics["拒答正确率"])
     if refuse < THRESHOLDS["拒答正确率"]:
         failures.append(f"拒答正确率 {refuse:.2f} < {THRESHOLDS['拒答正确率']}")
@@ -46,6 +55,10 @@ def gate() -> int:
     kw = _ratio(metrics["关键词命中率"])
     if kw < THRESHOLDS["关键词命中率"]:
         failures.append(f"关键词命中率 {kw:.2f} < {THRESHOLDS['关键词命中率']}")
+
+    citation = _ratio(metrics["引用正确率"])
+    if citation < THRESHOLDS["引用正确率"]:
+        failures.append(f"引用正确率 {citation:.2f} < {THRESHOLDS['引用正确率']}")
 
     if metrics["失败数"] > THRESHOLDS["最多失败数"]:
         failures.append(f"失败数 {metrics['失败数']} > {THRESHOLDS['最多失败数']}")

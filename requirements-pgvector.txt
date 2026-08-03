@@ -1,0 +1,4 @@
+-r requirements.txt
+
+langchain-postgres==0.0.17
+psycopg[binary]==3.3.4

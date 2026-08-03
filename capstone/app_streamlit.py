@@ -8,8 +8,8 @@ capstone/app_streamlit.py · 简易 Web 界面（演示用）
 """
 
 import streamlit as st
-import config as C
-from knowledge_base import KnowledgeBase
+from capstone import config as C
+from capstone.knowledge_base import KnowledgeBase
 
 st.set_page_config(page_title="企业知识库 Agent", page_icon="📚")
 st.title("📚 企业知识库 Agent")
