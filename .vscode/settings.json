@@ -1,3 +1,7 @@
 {
-    "python.defaultInterpreterPath": "/Library/Frameworks/Python.framework/Versions/3.14/bin/python3"
+    "python.defaultInterpreterPath": "d:/workspace/langchain-learning/.venv/Scripts/python.exe",
+    "code-runner.executorMap": {
+        "python": "$env:PYTHONIOENCODING='utf-8'; & 'd:/workspace/langchain-learning/.venv/Scripts/python.exe' -u $fullFileName"
+    },
+    "code-runner.runInTerminal": true
 }

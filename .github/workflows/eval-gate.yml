@@ -36,7 +36,6 @@ jobs:
       - name: Verify unified project baseline
         run: |
           cd day51
-          PYTHONPATH=src python -m customer_support.cli --check-data
           python -m pytest -q
           cd ..
           python -m capstone.project_baseline --json

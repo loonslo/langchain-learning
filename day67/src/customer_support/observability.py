@@ -28,3 +28,25 @@ class Recorder:
             self.records.append(
                 Trace(operation, tenant, status, (perf_counter() - start) * 1000)
             )
+
+
+class ObservedApplication:
+    """让正式产品的成功和异常都经过同一个不含原问题的计时边界。"""
+
+    def __init__(self, application, recorder: Recorder):
+        self.application = application
+        self.recorder = recorder
+
+    def handle(self, question, **kwargs):
+        tenant = kwargs.get("tenant_id", "local")
+        return self.recorder.measure(
+            "support.handle",
+            tenant,
+            lambda: self.application.handle(question, **kwargs),
+        )
+
+    def ask(self, question, **kwargs):
+        return self.handle(question, **kwargs).answer
+
+    def __getattr__(self, name):
+        return getattr(self.application, name)

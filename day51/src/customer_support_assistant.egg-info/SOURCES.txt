@@ -1,0 +1,17 @@
+README.md
+pyproject.toml
+src/customer_support/__init__.py
+src/customer_support/app.py
+src/customer_support/assistant.py
+src/customer_support/bootstrap.py
+src/customer_support/knowledge.py
+src/customer_support/settings.py
+src/customer_support_assistant.egg-info/PKG-INFO
+src/customer_support_assistant.egg-info/SOURCES.txt
+src/customer_support_assistant.egg-info/dependency_links.txt
+src/customer_support_assistant.egg-info/entry_points.txt
+src/customer_support_assistant.egg-info/requires.txt
+src/customer_support_assistant.egg-info/top_level.txt
+tests/test_app.py
+tests/test_assistant.py
+tests/test_knowledge.py

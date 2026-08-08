@@ -19,3 +19,22 @@ def filter_documents(documents: list[Document]):
             else doc
         )
     return safe, blocked
+
+
+class SecuredApplication:
+    """在任何检索、工具或工单副作用发生前检查用户输入。"""
+
+    def __init__(self, application):
+        self.application = application
+
+    def handle(self, question, **kwargs):
+        pattern = suspicious(question)
+        if pattern:
+            raise ValueError(f"检测到可疑指令：{pattern}")
+        return self.application.handle(question, **kwargs)
+
+    def ask(self, question, **kwargs):
+        return self.handle(question, **kwargs).answer
+
+    def __getattr__(self, name):
+        return getattr(self.application, name)

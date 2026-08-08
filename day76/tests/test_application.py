@@ -1,25 +1,22 @@
 from customer_support.application import SupportApplication
 from customer_support.assistant import REFUSAL, SupportAnswer
-from customer_support.auth import Identity
-from customer_support.cache import AnswerCache
+from customer_support.conversation import History
 from customer_support.orders import Order, OrderRepository
-from customer_support.tickets import TicketStore
 
 
-class A:
-    def ask(self, q):
+class Assistant:
+    def ask(self, _question):
         return SupportAnswer(REFUSAL, ())
 
 
-def test_end_to_end_order_is_scoped_and_unknown_question_escalates():
+def test_final_core_keeps_order_isolation_and_idempotent_escalation():
     app = SupportApplication(
-        A(),
+        Assistant(),
+        History(),
         OrderRepository([Order("A1", "alice", "已发货")]),
-        TicketStore(),
-        AnswerCache(60, lambda: 0),
     )
-    assert (
-        "已发货"
-        in app.handle(Identity("shop", "alice"), "状态", order_id="A1").answer.text
-    )
-    assert app.handle(Identity("shop", "alice"), "未知权益").ticket_id
+
+    assert "已发货" in app.handle("状态", user_id="alice", order_id="A1").answer.text
+    first = app.handle("未知", user_id="alice", idempotency_key="k1")
+    second = app.handle("未知", user_id="alice", idempotency_key="k1")
+    assert first.ticket_id == second.ticket_id

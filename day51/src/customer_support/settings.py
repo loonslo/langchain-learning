@@ -55,16 +55,18 @@ class Settings:
         到处调用 ``os.getenv``，也不会在不同文件中使用不同默认值。
         """
 
-        provider = os.getenv("LLM_PROVIDER", "deepseek").strip().lower()
+        provider = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
+        default_model = "deepseek-chat" if provider == "deepseek" else "qwen3.5:9b"
+        default_base_url = (
+            "https://api.deepseek.com" if provider == "deepseek" else "http://localhost:11434"
+        )
         return cls(
             # 业务资料属于项目本身，因此路径相对于 PROJECT_ROOT 计算，不依赖运行目录。
             knowledge_path=PROJECT_ROOT / "data" / "knowledge" / "customer_faq.md",
             embedding_model=os.getenv("EMBED_MODEL_PATH", "BAAI/bge-small-zh-v1.5"),
             llm_provider=provider,
             # 没有显式配置模型时，根据 provider 选择一个教学用默认值。
-            llm_model=os.getenv(
-                "LLM_MODEL", "deepseek-chat" if provider == "deepseek" else "qwen2.5:7b"
-            ),
-            llm_base_url=os.getenv("LLM_BASE_URL", "https://api.deepseek.com"),
-            llm_api_key=os.getenv("LLM_API_KEY", ""),
+            llm_model=os.getenv("LLM_MODEL", default_model),
+            llm_base_url=os.getenv("LLM_BASE_URL", default_base_url),
+            llm_api_key=(os.getenv("LLM_API_KEY") or os.getenv("DEEPSEEK_API_KEY", "")),
         )

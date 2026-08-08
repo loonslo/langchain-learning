@@ -1,0 +1,2 @@
+[console_scripts]
+support-assistant = customer_support.app:main

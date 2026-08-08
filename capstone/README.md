@@ -104,12 +104,13 @@ streamlit run capstone/app_streamlit.py
 
 ## 每日学习入口与项目运行入口
 
-```bash
+```text
 # 每日文件保存当天任务，capstone/ 保存逐日累积的业务实现
-cd day51
-$env:PYTHONPATH="src"; python -m customer_support.cli --check-data
-python -m pytest -q
+PyCharm 主程序模块：customer_support.app
+PyCharm 测试目录：tests
+```
 
+```bash
 # 汇总查看全部 Day51–78 的接入状态；partial 不包装成已交付
 python -m capstone.milestones --strict-evidence
 

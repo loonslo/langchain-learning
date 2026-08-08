@@ -33,10 +33,12 @@ reports/                         # Generated outputs: eval_runs.csv, failures.js
 ## Key Commands
 
 ### Day51–78 cumulative project
+```text
+PyCharm module: customer_support.app          # Run the user-facing main program
+PyCharm pytest: day51/tests                   # Run Day51 focused acceptance tests
+```
+
 ```bash
-cd day51
-$env:PYTHONPATH="src"; ..\.venv\Scripts\python.exe -m customer_support.cli --check-data
-..\.venv\Scripts\python.exe -m pytest -q       # Run Day51 focused acceptance tests
 python -m capstone.milestones 51             # Show one project event and its acceptance evidence
 python -m capstone.milestones --strict-evidence
 python -m capstone.project_baseline --json

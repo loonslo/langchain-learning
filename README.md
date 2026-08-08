@@ -40,7 +40,7 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 
 ## 课程地图（Day1-78）
 
-> Day1–50 使用独立练习文件建立基础；Day51–78 使用“每日完整变更集”推进同一个项目。README 记录当天完整结构，未修改文件不重复复制，并可用 `tools/materialize_day.py` 还原任意一天。
+> Day1–50 使用独立练习文件建立基础；Day51–78 使用“每日完整变更集”推进同一个项目。每天除了新增文件，还必须展示被改写的旧文件和继续参与主链但未改的文件。README 记录当天完整结构，未修改文件不重复复制，并可用 `tools/materialize_day.py` 还原任意一天。
 
 ### 阶段0 固本 + 裸写 harness（Day1-11）
 
@@ -140,6 +140,14 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 ```
 
 生成结果位于 `.build/day78/customer-support/`。每个 Day 只保存当日变更，完整结构和精确代码搜索目标记录在当天 README 中。
+
+查看某一天相对上一天的真实文件变更：
+
+```powershell
+python tools/day_change_report.py 52
+```
+
+Day51–Day54 的逐文件衔接说明见 [`docs/Day51-Day54衔接变更总览.md`](docs/Day51-Day54衔接变更总览.md)；后续完整主线见 [`docs/Day55-Day78衔接总览.md`](docs/Day55-Day78衔接总览.md)。
 
 ### 可选补充：AI 自动化测试 backup（Day79-88，规划中）
 

@@ -1,8 +1,10 @@
-"""根据真实每日变更集生成 Day52–78 教程和工作簿。"""
+"""根据真实每日变更集生成 Day55–78 教程和工作簿。"""
 
 from __future__ import annotations
 import ast
 from pathlib import Path
+
+from day_change_report import snapshot
 
 ROOT = Path(__file__).resolve().parent.parent
 META = {
@@ -170,6 +172,13 @@ META = {
     ),
 }
 ROLES = {
+    "app.py": "交互式用户入口",
+    "application.py": "逐日累积的统一业务编排",
+    "assistant.py": "检索、拒答、生成与来源返回",
+    "bootstrap.py": "创建真实依赖并接入正式主链",
+    "knowledge.py": "摄取结果与检索器的装配点",
+    "runtime.py": "HTTP、运维能力与真实依赖的组合入口",
+    "settings.py": "截至今天的运行路径与环境配置",
     "ingestion.py": "多文档加载和稳定 ID",
     "evaluation.py": "离线用例与分层判断",
     "retrieval.py": "RRF 排名融合",
@@ -199,6 +208,32 @@ ROLES = {
     "evidence.py": "证据核验",
     "acceptance.py": "最终验收",
 }
+CHAINS = {
+    55: "app → bootstrap.build_application → SupportApplication → History → assistant",
+    56: "app → bootstrap → SupportApplication → WorkflowAssistant/LangGraph → assistant",
+    57: "app → application.handle → 订单归属查询或 RAG 问答",
+    58: "application.handle → call_read_only → OrderRepository → 有限重试结果",
+    59: "application.handle → assistant → escalate → TicketStore",
+    60: "app/API → application → PersistentHistory → SQLiteThreadStore",
+    61: "HTTP /chat → create_app → application.handle → Day55–60 累积主链",
+    62: "Idempotency-Key → API → application → IdempotencyStore → TicketStore",
+    63: "Bearer token → TokenVerifier → Identity → API → application",
+    64: "HTTP /knowledge/sync-plan → SyncingApplication → scan/plan → knowledge_path",
+    65: "API/CLI → SecuredApplication + 文档过滤 → workflow → assistant",
+    66: "用户原文 → PrivacyApplication → 业务链；脱敏副本 → audit_log",
+    67: "API/CLI → ObservedApplication → 安全/缓存/业务链 → Trace",
+    68: "API/CLI → ObservedApplication → CachedApplication → 业务链",
+    69: "eval_cases → evaluate → metrics_from_results → quality_gate.check → 退出码",
+    70: "容器/CLI/API 启动 → bootstrap.build_application → ensure_ready → 构建依赖",
+    71: "scan/plan → apply_plan → VectorStore.upsert/delete_source",
+    72: "配置检查 + 压测样本 → release_readiness → 发布判定",
+    73: "同一 FastAPI → /chat、/knowledge/sync-plan、/feedback → FeedbackStore",
+    74: "bootstrap → primary.invoke → 临时错误时 fallback.invoke → workflow",
+    75: "正式 thread_db_path → SQLiteThreadStore.backup_to → integrity_check",
+    76: "runtime → 认证 API → 同步/反馈/统一 application → 安全、缓存、工具、工单",
+    77: "项目陈述 → runtime.verify_project_evidence → 仓库真实文件",
+    78: "可执行 checks → run_acceptance → 任一能力失败则最终验收失败",
+}
 SKIP = {"README.md", "workbook.md"}
 IGNORE = {"__pycache__", ".pytest_cache", ".ruff_cache", ".deepeval"}
 
@@ -212,12 +247,24 @@ def files(day):
     )
 
 
-def latest(day):
-    result = {}
-    for n in range(51, day + 1):
-        for path in files(n):
-            result[path] = n
+def source_days(day):
+    result: dict[str, int] = {}
+    for number in range(51, day + 1):
+        for path in files(number):
+            result[path] = number
     return result
+
+
+def classify(day):
+    previous = snapshot(day - 1)
+    current = snapshot(day)
+    added = sorted(set(current) - set(previous))
+    modified = sorted(
+        path for path in set(current) & set(previous) if current[path] != previous[path]
+    )
+    removed = sorted(set(previous) - set(current))
+    unchanged = sorted(set(current) & set(previous) - set(modified))
+    return added, modified, removed, unchanged
 
 
 def role(path):
@@ -254,22 +301,58 @@ def symbols(day, path):
     )
 
 
+def affected_inherited(day, changed, unchanged):
+    """找出今天代码实际导入、但本日没有复制修改的旧模块。"""
+
+    inherited = set()
+    unchanged_set = set(unchanged)
+    for path in changed:
+        source = ROOT / f"day{day}" / path
+        if not path.startswith("src/customer_support/") or not source.exists():
+            continue
+        try:
+            tree = ast.parse(source.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+        for node in ast.walk(tree):
+            if not isinstance(node, ast.ImportFrom) or node.level != 1 or not node.module:
+                continue
+            candidate = f"src/customer_support/{node.module.split('.')[0]}.py"
+            if candidate in unchanged_set:
+                inherited.add(candidate)
+    return sorted(inherited)
+
+
 def render(day):
     title, problem, principle, boundary = META[day]
-    changed = files(day)
-    state = latest(day)
-    rows = []
-    for path in changed:
-        previous = next((n for n in range(day - 1, 50, -1) if path in files(n)), None)
-        rows.append(
-            f"| `{path}` | {'修改（上一版 Day' + str(previous) + '）' if previous else '新增'} | {role(path)} |"
-        )
+    added, modified, removed, unchanged = classify(day)
+    changed = added + modified
+    state = source_days(day)
+    previous_state = source_days(day - 1)
+    inherited = affected_inherited(day, changed, unchanged)
+
+    rows = [
+        f"| `{path}` | 新增 | {role(path)} |"
+        for path in added
+    ] + [
+        f"| `{path}` | 修改旧文件（上一版 Day{previous_state[path]}） | {role(path)} |"
+        for path in modified
+    ] + [
+        f"| `{path}` | 删除 | 从今天的产品快照移除 |"
+        for path in removed
+    ]
+    inherited_rows = [
+        f"| `{path}` | 继承 Day{previous_state[path]}，今天仍被变更代码调用 | {role(path)} |"
+        for path in inherited
+    ] or ["| 无 | 今天的变更不直接导入旧模块 | - |"]
     tree = "\n".join(
         f"{path}  # {'本日变更' if source == day else '继承 Day' + str(source)}"
         for path, source in sorted(state.items())
     )
-    source_files = [p for p in changed if p.startswith("src/")]
-    tests = [p for p in changed if p.startswith("tests/")]
+    source_files = [
+        path for path in modified + added if path.startswith("src/")
+    ]
+    tests = [path for path in modified + added if path.startswith("tests/")]
     read_order = "\n".join(
         f"{i}. 打开 `{p}`：{symbols(day, p)}。写出输入、输出、调用方和失败分支。"
         for i, p in enumerate(source_files + tests, 1)
@@ -280,15 +363,31 @@ def render(day):
 >
 > 第一性原则：{principle}。
 
-## 1. 与前一天的关系
+## 1. 与 Day{day - 1} 的文件衔接
 
-先还原并跑通 Day{day - 1}，再开始今天。Day{day} 目录只保存今天新增或修改的完整文件；下方结构图中的“继承 DayNN”文件今天无需重复阅读。
+先还原并跑通 Day{day - 1}，再开始今天。不要只看新增文件：先确认今天修改了哪些旧文件，再沿“关键继承文件”检查新能力是否真的进入已有产品链。
 
-## 2. 今天新增或修改
+### 今天新增、修改或删除
 
-| 项目相对路径 | 变更 | 职责 |
+| 项目相对路径 | 状态 | 为什么今天要看 |
 |---|---|---|
 {chr(10).join(rows)}
+
+### 关键继承文件
+
+| 项目相对路径 | 状态 | 在今天链路中的作用 |
+|---|---|---|
+{chr(10).join(inherited_rows)}
+
+运行 `python tools/day_change_report.py {day}` 可查看全部“继承未改”文件。
+
+## 2. 今天结束后的真实调用链
+
+```text
+{CHAINS[day]}
+```
+
+验收时必须能指出：新增能力从哪里被调用、结果交给谁、失败会在哪一层被拦住。
 
 ## 3. Day{day} 结束后的完整项目结构
 
@@ -298,9 +397,9 @@ def render(day):
 
 ## 4. 按顺序阅读和动手
 
-{read_order}
+{read_order or '本日没有 Python 源码变更，按发布/文档链检查真实输入与输出。'}
 
-动手时先写/修改测试，确认失败原因正确，再完成最小实现。不要读取本日未修改的继承文件，除非测试失败需要沿调用链排查。
+动手时先写或修改测试，确认失败原因正确，再完成最小实现。对上表列出的关键继承文件，至少核对一次调用接口；它们虽未改动，却决定今天的新能力能否生效。
 
 ## 5. 还原并验收
 
@@ -319,21 +418,42 @@ $env:PYTEST_DISABLE_PLUGIN_AUTOLOAD="1"
 
 {boundary}。把实际运行结果写入 `workbook.md`。
 """
+    workbook_rows = "\n".join(
+        f"| `{path}` | {'新增' if path in added else '修改旧文件' if path in modified else '删除'} | 待填写 | 待填写 |"
+        for path in changed + removed
+    )
     workbook = f"""# Day{day} 工作簿 · {title}
 
+## 0. 先确认本日变更闭环
+
+| 文件 | 状态 | 它接到哪个旧文件/入口 | 如果不接会发生什么 |
+|---|---|---|---|
+{workbook_rows}
+
+真实链路：`{CHAINS[day]}`
+
+## 1. 从 Day{day - 1} 继续
+
 1. 前一天暴露的真实问题是什么？{problem}（请用自己的话重写）
-2. 今天每个变更文件的输入、输出和调用方分别是什么？待填写。
-3. 哪条测试保护 happy path，哪条保护失败或安全边界？待填写。
-4. 从完整结构图中找出三个继承文件，说明为什么今天不重复复制它们。
-5. 运行 `materialize_day.py {day}`，记录累计测试数量和结果。
-6. 删除或改错今天的一行关键保护，观察哪条测试失败，然后恢复。
-7. 今天仍不能证明什么？{boundary}（补充你的判断）
-8. 用 60 秒面试表达说明：问题 → 方案 → 测试证据 → 边界。
+2. 今天哪些旧文件被修改？为什么只新增模块还不够？待填写。
+3. 哪些继承文件虽然未改，却仍参与今天的调用链？待填写。
+
+## 2. 运行与证据
+
+1. 哪条测试证明新能力已从正式入口可达？待填写。
+2. 哪条测试保护失败、安全或隔离边界？待填写。
+3. 运行 `materialize_day.py {day}`，记录累计测试数量和结果：待填写。
+4. 暂时断开一个集成点，观察哪条测试失败，然后恢复：待填写。
+
+## 3. 今日结论
+
+1. 今天仍不能证明什么？{boundary}（补充你的判断）
+2. 用 60 秒说明：旧问题 → 新增能力 → 修改旧文件 → 调用链 → 测试证据 → 边界。
 """
     (ROOT / f"day{day}" / "README.md").write_text(readme, encoding="utf-8")
     (ROOT / f"day{day}" / "workbook.md").write_text(workbook, encoding="utf-8")
 
 
 if __name__ == "__main__":
-    for day in range(52, 79):
+    for day in range(55, 79):
         render(day)
