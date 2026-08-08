@@ -50,7 +50,7 @@ def build_chat_model(settings: Settings):
 def build_assistant(settings: Settings | None = None) -> CustomerSupportAssistant:
     """按“配置 → embedding → retriever → LLM → assistant”顺序组装应用。"""
 
-    # 调用方可以传入 Settings；普通 CLI 不传时才从环境创建。
+    # 调用方可以传入 Settings；主程序不传时才从环境创建。
     settings = settings or Settings.from_env()
 
     # embedding 用于检索，chat model 用于生成。它们是两个不同模型。

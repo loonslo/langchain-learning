@@ -1,39 +1,40 @@
-# Day51：企业客服知识库助手
+# 企业客服知识库助手 · Day54 产品版本
 
-这是一个最小可运行的客服 RAG 项目。程序先从本地 FAQ 检索证据；没有命中证据时直接拒答，不调用聊天模型；命中后才让模型整理答案，并从检索文档的 metadata 返回来源。
+这是 Day51～54 累积得到的产品目录。当前主链包含自由问答、多文档摄取、混合检索、来源引用、拒答和离线评测。
 
-## 项目结构
+## PyCharm 直接运行
+
+只需配置一次：
+
+1. 项目解释器选择 `D:\workspace\langchain-learning\.venv\Scripts\python.exe`。
+2. 将 `customer_support/src` 标记为 Sources Root。
+3. 新建 Python Module 运行配置。
+4. Module name 填 `customer_support.app`。
+5. Working directory 选择 `D:\workspace\langchain-learning\customer_support`。
+
+以后直接点击 PyCharm 运行按钮，然后输入自己的问题。输入 `exit` 或 `退出` 结束，不需要配置 `PYTHONPATH`，也不需要填写运行参数。
+
+## 开发验收
+
+开发评测单独建立 Module 运行配置：
 
 ```text
-customer_support/
-├── data/knowledge/customer_faq.md
-├── src/customer_support/
-│   ├── settings.py    # 读取模型、资料路径与检索配置
-│   ├── knowledge.py   # 加载、切块并创建 Chroma Retriever
-│   ├── assistant.py   # 输入检查、证据分支、回答与来源整理
-│   ├── ollama_model.py # 本地 Ollama HTTP 适配器
-│   ├── bootstrap.py   # 创建 embedding、Retriever 与聊天模型
-│   └── cli.py         # 命令行入口
-├── tests/
-├── .env.example
-├── .gitignore
-└── pyproject.toml
+Module name: customer_support.evaluation
+Working directory: D:\workspace\langchain-learning\customer_support
 ```
 
-## 运行
+自动化测试直接在 PyCharm 中右键 `tests` 目录运行。测试替身只存在于 `tests/`，不会进入主程序。
 
-```powershell
-python -m pip install -e .
-Copy-Item .env.example .env
-support-assistant --check-data
-support-assistant --question "退款多久到账？"
-python -m pytest -q
+## 当前产品链
+
+```text
+用户输入
+  → 全部 Markdown 摄取
+  → Chroma 语义检索 + BM25 关键词检索
+  → RRF 融合
+  → CustomerSupportAssistant
+  → 有证据生成 / 无证据拒答
+  → 答案和真实来源
 ```
 
-默认使用本机 Ollama 的 `qwen3.5:9b`，embedding 在 CPU 上运行。本地适配器会省略未使用的 `tools` 字段，避开当前环境中空工具数组导致的 502。要改用 DeepSeek，请在本机 `.env` 中切换 provider 并填写密钥；不要把 `.env` 提交到仓库。
-
-## 当前边界
-
-- `0.55` 是待评测的相关度起始值，不代表生产最优值。
-- Chroma 仅在内存中创建，程序重启后会重新构建。
-- 当前只有一份示例 FAQ，尚未包含权限过滤、对话记忆和线上评测。
+默认使用本机 Ollama `qwen3.5:9b`，embedding 默认运行在 CPU。Day54 是本地可运行里程碑，持久化 API、身份、租户隔离和部署能力将在后续日期继续接入同一产品主链。

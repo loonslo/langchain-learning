@@ -1,53 +1,65 @@
-"""最终 HTTP 边界：认证后把知识问答、订单查询和人工升级交给统一应用。"""
+"""Day76 最终 HTTP 边界：认证身份进入统一应用，并保留同步运维入口。"""
 
-from __future__ import annotations
-from typing import Protocol
 from fastapi import FastAPI, Header, HTTPException
 from pydantic import BaseModel, Field
-from .application import ApplicationResult
-from .auth import AuthenticationError, Identity, TokenVerifier
 
-
-class Application(Protocol):
-    def handle(
-        self, identity: Identity, question: str, version: str = "v1", order_id: str = ""
-    ) -> ApplicationResult: ...
+from .auth import AuthenticationError, TokenVerifier
 
 
 class ChatRequest(BaseModel):
     question: str = Field(min_length=1, max_length=500)
+    session_id: str = Field(default="default", min_length=1, max_length=50)
     order_id: str = Field(default="", max_length=50)
 
 
 class ChatResponse(BaseModel):
     answer: str
     sources: list[str]
-    ticket_id: str | None
+    ticket_id: str | None = None
 
 
-def create_app(service: Application, verifier: TokenVerifier) -> FastAPI:
-    """创建 API；客户端自报身份不会进入业务层。"""
+class SyncRequest(BaseModel):
+    previous: dict[str, str] = Field(default_factory=dict)
+
+
+def create_app(service, verifier: TokenVerifier) -> FastAPI:
     app = FastAPI(title="Customer Support Copilot", version="1.0.0")
 
+    def verify(authorization: str):
+        try:
+            return verifier.verify(authorization)
+        except AuthenticationError as exc:
+            raise HTTPException(status_code=401, detail=str(exc)) from exc
+
     @app.get("/health")
-    def health() -> dict[str, str]:
+    def health():
         return {"status": "ok"}
 
     @app.post("/chat", response_model=ChatResponse)
     def chat(
-        request: ChatRequest, authorization: str = Header(default="")
-    ) -> ChatResponse:
-        try:
-            identity = verifier.verify(authorization)
-            result = service.handle(
-                identity, request.question, order_id=request.order_id
-            )
-        except AuthenticationError as exc:
-            raise HTTPException(status_code=401, detail=str(exc)) from exc
+        request: ChatRequest,
+        authorization: str = Header(default=""),
+        idempotency_key: str = Header(default="", alias="Idempotency-Key"),
+    ):
+        identity = verify(authorization)
+        result = service.handle(
+            request.question,
+            tenant_id=identity.tenant_id,
+            user_id=identity.user_id,
+            session_id=request.session_id,
+            order_id=request.order_id,
+            idempotency_key=idempotency_key,
+        )
         return ChatResponse(
             answer=result.answer.text,
             sources=list(result.answer.sources),
             ticket_id=result.ticket_id,
         )
+
+    @app.post("/knowledge/sync-plan")
+    def sync_plan(request: SyncRequest, authorization: str = Header(default="")):
+        verify(authorization)
+        result = service.plan_sync(request.previous)
+        return {"upsert": list(result.upsert), "delete": list(result.delete)}
 
     return app

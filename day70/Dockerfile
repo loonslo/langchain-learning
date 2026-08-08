@@ -6,4 +6,4 @@ COPY data ./data
 RUN pip install --no-cache-dir .
 RUN useradd --create-home appuser
 USER appuser
-CMD ["python", "-m", "customer_support.cli", "--check-data"]
+CMD ["python", "-m", "customer_support.app"]

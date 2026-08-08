@@ -1,26 +1,29 @@
-"""生产组合入口：创建真实 RAG，再接缓存、订单、工单、身份与 FastAPI。"""
+"""Day76 最终组合入口：所有已学能力进入同一个 FastAPI 进程。"""
 
-from __future__ import annotations
 import os
-from time import monotonic
+from pathlib import Path
+
 from .api import create_app
-from .application import SupportApplication
 from .auth import TokenVerifier
-from .bootstrap import build_assistant
-from .cache import AnswerCache
-from .orders import OrderRepository
-from .tickets import TicketStore
+from .bootstrap import build_application
+from .feedback import FeedbackStore, attach_feedback_routes
+from .settings import Settings
+from .sync import SyncingApplication
+from .thread_store import SQLiteThreadStore
 
 
 def create_runtime_api():
-    """供 ``uvicorn customer_support.runtime:create_runtime_api --factory`` 调用。"""
     secret = os.getenv("JWT_SECRET", "")
     if len(secret) < 32:
         raise RuntimeError("JWT_SECRET 至少需要 32 个字符")
-    service = SupportApplication(
-        build_assistant(),
-        OrderRepository([]),
-        TicketStore(),
-        AnswerCache(ttl=60, clock=monotonic),
-    )
-    return create_app(service, TokenVerifier(secret))
+    settings = Settings.from_env()
+    verifier = TokenVerifier(secret)
+    service = SyncingApplication(build_application(settings), settings.knowledge_path)
+    app = create_app(service, verifier)
+    attach_feedback_routes(app, FeedbackStore(), verifier)
+    return app
+
+
+def backup_threads(target: Path, settings: Settings | None = None) -> Path:
+    settings = settings or Settings.from_env()
+    return SQLiteThreadStore(settings.thread_db_path).backup_to(target)

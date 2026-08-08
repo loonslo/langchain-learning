@@ -1,0 +1,14 @@
+{
+  // 让 Code Runner 在集成终端（Terminal）中运行，而不是只读的 Output 面板，
+  // 这样 python 的 input() 才能正常接收键盘输入进行交互。
+  "code-runner.runInTerminal": true,
+
+  // 指定 python 运行命令（可根据需要改成 python3 或带虚拟环境的路径）
+  "code-runner.executorMap": {
+    "python": "python -u"
+  },
+
+  // 运行前不自动切换焦点到输出，保持终端聚焦，方便输入
+  "code-runner.preserveFocus": false,
+  "code-runner.clearPreviousOutput": true
+}

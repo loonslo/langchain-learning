@@ -45,7 +45,7 @@ class ChatModel(Protocol):
 
 @dataclass(frozen=True)
 class SupportAnswer:
-    """返回给 CLI/API 的稳定业务结果，不直接泄露 LangChain 内部对象。"""
+    """返回给主程序/API 的稳定业务结果，不直接泄露 LangChain 内部对象。"""
 
     text: str
     sources: tuple[str, ...]
@@ -60,7 +60,7 @@ class CustomerSupportAssistant:
         self.model = model
 
     def ask(self, question: str) -> SupportAnswer:
-        """回答一个问题；这是 CLI、未来 API 和评测都应复用的唯一业务入口。"""
+        """回答一个问题；这是主程序、未来 API 和评测复用的唯一业务入口。"""
 
         # 1. 把连续空白（空格、换行、Tab）压成一个空格，减少无意义的检索差异。
         normalized = " ".join(question.split())

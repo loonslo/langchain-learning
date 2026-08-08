@@ -16,3 +16,22 @@ def redact(text):
         if count:
             kinds.append(kind)
     return text, tuple(kinds)
+
+
+class PrivacyApplication:
+    """业务仍接收原问题；审计副本只保存脱敏文本和命中类型。"""
+
+    def __init__(self, application):
+        self.application = application
+        self.audit_log: list[dict[str, object]] = []
+
+    def handle(self, question, **kwargs):
+        safe_question, kinds = redact(question)
+        self.audit_log.append({"question": safe_question, "pii_kinds": kinds})
+        return self.application.handle(question, **kwargs)
+
+    def ask(self, question, **kwargs):
+        return self.handle(question, **kwargs).answer
+
+    def __getattr__(self, name):
+        return getattr(self.application, name)

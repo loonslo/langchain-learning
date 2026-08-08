@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Callable, TypedDict
 from langchain_core.documents import Document
 from langgraph.graph import END, START, StateGraph
-from .assistant import REFUSAL
+from .assistant import PROMPT, REFUSAL, SupportAnswer
 
 
 class SupportState(TypedDict, total=False):
@@ -45,3 +45,23 @@ def build_graph(retrieve: Callable[[str], list[Document]], generate: Callable[[s
     graph.add_edge("retrieve", "answer")
     graph.add_edge("answer", END)
     return graph.compile()
+
+
+class WorkflowAssistant:
+    """把 LangGraph 适配回主程序一直使用的 ``ask`` 接口。"""
+
+    def __init__(self, assistant):
+        self.assistant = assistant
+        self.graph = build_graph(assistant.retriever.invoke, self._generate)
+
+    def _generate(self, question: str, documents: list[Document]) -> str:
+        context = "\n\n".join(document.page_content for document in documents)
+        messages = PROMPT.invoke({"context": context, "question": question}).to_messages()
+        response = self.assistant.model.invoke(messages)
+        return str(getattr(response, "content", response)).strip() or REFUSAL
+
+    def ask(self, question: str) -> SupportAnswer:
+        state = self.graph.invoke({"question": question})
+        if state.get("error"):
+            raise ValueError(state["error"])
+        return SupportAnswer(state["answer"], tuple(state.get("sources", ())))

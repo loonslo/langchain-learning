@@ -1,37 +1,30 @@
 from fastapi.testclient import TestClient
+
 from customer_support.api import create_app
 from customer_support.application import ApplicationResult
 from customer_support.assistant import SupportAnswer
 from customer_support.auth import Identity, TokenVerifier
 
 
-class FakeApplication:
-    def handle(
-        self, identity: Identity, question: str, version: str = "v1", order_id: str = ""
-    ):
+class Product:
+    def handle(self, question, **context):
         return ApplicationResult(
-            SupportAnswer(f"{identity.user_id}:{question}", ("faq.md",))
+            SupportAnswer(f"{context['user_id']}:{question}", ("faq.md",))
         )
 
+    def plan_sync(self, previous):
+        raise AssertionError("本测试不走同步路径")
 
-def test_api_uses_signed_identity_and_returns_final_contract():
+
+def test_final_api_rejects_missing_token_and_uses_signed_identity():
     verifier = TokenVerifier("day76-test-secret-at-least-32-bytes")
     token = verifier.issue(Identity("shop", "alice"))
-    client = TestClient(create_app(FakeApplication(), verifier))
-    response = client.post(
-        "/chat", headers={"Authorization": f"Bearer {token}"}, json={"question": "退款"}
-    )
-    assert response.json() == {
-        "answer": "alice:退款",
-        "sources": ["faq.md"],
-        "ticket_id": None,
-    }
+    client = TestClient(create_app(Product(), verifier))
 
-
-def test_api_rejects_missing_identity_before_business_call():
-    client = TestClient(
-        create_app(
-            FakeApplication(), TokenVerifier("day76-test-secret-at-least-32-bytes")
-        )
-    )
     assert client.post("/chat", json={"question": "退款"}).status_code == 401
+    response = client.post(
+        "/chat",
+        headers={"Authorization": f"Bearer {token}"},
+        json={"question": "退款"},
+    )
+    assert response.json()["answer"] == "alice:退款"

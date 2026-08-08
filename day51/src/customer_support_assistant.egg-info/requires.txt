@@ -1,0 +1,8 @@
+langchain-chroma<2,>=1.1
+langchain-community<1,>=0.4
+langchain-core<2,>=1.4
+langchain-huggingface<2,>=1.2
+langchain-ollama<2,>=1.1
+langchain-openai<2,>=1.3
+langchain-text-splitters<2,>=1.1
+python-dotenv<2,>=1.2

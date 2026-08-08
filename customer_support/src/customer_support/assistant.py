@@ -1,4 +1,9 @@
-"""编排检索与模型调用，执行客服问答的稳定业务规则。"""
+"""实现一次完整的客服知识问答业务用例。
+
+本模块不知道 Chroma、DeepSeek 或 Ollama 如何初始化，只依赖两个最小能力：
+Retriever 能按问题返回 Document，ChatModel 能按消息生成回答。这样业务规则既能
+连接真实 LangChain 组件，也能在测试中换成不会联网的 Fake。
+"""
 
 from __future__ import annotations
 
@@ -9,10 +14,8 @@ from typing import Protocol
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 
-
 # 拒答文案集中定义，正式代码和测试共享同一个业务约定。
 REFUSAL = "知识库中没有足够信息，请转人工客服。"
-
 
 # Prompt 只约束“拿到证据以后怎样回答”。是否有足够证据不能只靠这段文字，
 # ask() 还会在调用模型前执行一次确定性的空证据检查。
@@ -42,7 +45,7 @@ class ChatModel(Protocol):
 
 @dataclass(frozen=True)
 class SupportAnswer:
-    """返回给 CLI/API 的稳定业务结果，不直接泄露 LangChain 内部对象。"""
+    """返回给主程序/API 的稳定业务结果，不直接泄露 LangChain 内部对象。"""
 
     text: str
     sources: tuple[str, ...]
@@ -57,7 +60,8 @@ class CustomerSupportAssistant:
         self.model = model
 
     def ask(self, question: str) -> SupportAnswer:
-        """回答一个问题；这是 CLI、未来 API 和评测都应复用的唯一业务入口。"""
+        """回答一个问题；这是主程序、未来 API 和评测复用的唯一业务入口。"""
+
         # 1. 把连续空白（空格、换行、Tab）压成一个空格，减少无意义的检索差异。
         normalized = " ".join(question.split())
 
@@ -77,26 +81,24 @@ class CustomerSupportAssistant:
         messages = PROMPT.invoke({"context": context, "question": normalized}).to_messages()
 
         # 6. 模型负责把证据组织成自然语言，不负责决定引用来源。
-        response = self.model.invoke(messages)
+        # 模型调用可能失败（如 Ollama 临时不可用返回 502、网络中断等），
+        # 这里捕获异常并给出友好提示，而不是直接让整个会话崩溃退出。
+        try:
+            response = self.model.invoke(messages)
+        except Exception as exc:  # noqa: BLE001 - 此处需要兜底所有 provider 的瞬时错误
+            return SupportAnswer(
+                f"模型暂时无法响应（{type(exc).__name__}），请稍后重试或转人工客服。",
+                (),
+            )
         # LangChain ChatModel 通常返回带 content 的 AIMessage；兼容测试中的简单对象。
         answer = str(getattr(response, "content", response)).strip() or REFUSAL
 
         # 7. 引用只从 Document.metadata 生成。dict.fromkeys 在保留顺序的同时去重。
         # Path(...).name 只暴露文件名，不把开发者本机绝对路径返回给用户。
-
-        source_names: list[str] = []
-
-        for document in documents:
-            source = document.metadata.get("source")
-
-            if not source:
-                continue
-
-            filename = Path(str(source)).name
-
-            if filename:
-                source_names.append(filename)
-
-        sources = tuple(dict.fromkeys(source_names))
-
+        sources = tuple(
+            dict.fromkeys(
+                Path(str(document.metadata.get("source", "unknown"))).name
+                for document in documents
+            )
+        )
         return SupportAnswer(answer, sources)

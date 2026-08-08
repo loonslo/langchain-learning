@@ -20,7 +20,7 @@ dependencies = [
 ]
 
 [project.scripts]
-support-assistant = "customer_support.cli:main"
+support-assistant = "customer_support.app:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
