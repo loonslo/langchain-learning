@@ -9,7 +9,7 @@ from types import SimpleNamespace
 import pytest
 from langchain_core.documents import Document
 
-from customer_support.assistant import REFUSAL, CustomerSupportAssistant
+from src.assistant import REFUSAL, CustomerSupportAssistant
 
 
 class FakeRetriever:

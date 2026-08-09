@@ -2,10 +2,12 @@
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from customer_support.ollama_model import OllamaChatModel
+from src.ollama_model import OllamaChatModel
 
 
 class FakeResponse:
+    """模仿 httpx 响应中适配器会用到的最小字段。"""
+
     is_error = False
     status_code = 200
     text = ""
@@ -15,14 +17,16 @@ class FakeResponse:
 
 
 def test_ollama_request_omits_empty_tools(monkeypatch):
+    # monkeypatch 在测试期间替换网络函数，结束后 pytest 会自动还原它。
     captured = {}
 
     def fake_post(url, **kwargs):
+        # 不发真实 HTTP 请求，只保存请求参数供后续断言。
         captured["url"] = url
         captured.update(kwargs)
         return FakeResponse()
 
-    monkeypatch.setattr("customer_support.ollama_model.httpx.post", fake_post)
+    monkeypatch.setattr("src.ollama_model.httpx.post", fake_post)
     model = OllamaChatModel("qwen3.5:9b", "http://localhost:11434")
 
     response = model.invoke(

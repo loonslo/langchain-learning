@@ -1,6 +1,8 @@
+"""验证关键词检索和 RRF 融合的排序规则。"""
+
 from langchain_core.documents import Document
 
-from customer_support.retrieval import (
+from src.retrieval import (
     HybridRetriever,
     KeywordRetriever,
     reciprocal_rank_fusion,
@@ -8,10 +10,12 @@ from customer_support.retrieval import (
 
 
 def doc(key):
+    """用最少字段创建测试文档，避免每个测试重复样板代码。"""
     return Document(page_content=key, metadata={"chunk_id": key})
 
 
 def test_document_found_by_both_channels_ranks_first_and_is_unique():
+    # 文档 b 同时被两条检索通道命中，因此 RRF 分数最高且最终只出现一次。
     result = reciprocal_rank_fusion([[doc("a"), doc("b")], [doc("b"), doc("c")]])
     assert [document.metadata["chunk_id"] for document in result] == ["b", "a", "c"]
 
@@ -32,6 +36,8 @@ def test_keyword_retriever_finds_exact_business_policy():
 
 
 class EmptySemanticRetriever:
+    """故意不返回结果，用来确认关键词通道可独立提供资料。"""
+
     def invoke(self, _question):
         return []
 
