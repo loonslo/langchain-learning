@@ -13,6 +13,7 @@ dependencies = [
   "langchain-community>=0.4,<1",
   "langchain-core>=1.4,<2",
   "langchain-huggingface>=1.2,<2",
+  "langgraph>=1.2,<2",
   "langchain-ollama>=1.1,<2",
   "langchain-openai>=1.3,<2",
   "langchain-text-splitters>=1.1,<2",
@@ -20,13 +21,13 @@ dependencies = [
 ]
 
 [project.scripts]
-support-assistant = "customer_support.app:main"
+support-assistant = "src.app:main"
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["."]
 
 [tool.pytest.ini_options]
-pythonpath = ["src"]
+pythonpath = ["."]
 testpaths = ["tests"]
 
 [tool.ruff]

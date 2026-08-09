@@ -3,12 +3,13 @@
   // 这样 python 的 input() 才能正常接收键盘输入进行交互。
   "code-runner.runInTerminal": true,
 
-  // 指定 python 运行命令（可根据需要改成 python3 或带虚拟环境的路径）
+  // 使用项目根目录的虚拟环境 .venv 中的 python 运行（与 day51 一致）。
+  // app.py 内部已强制 stdout/stdin 为 UTF-8，无需再设置 PYTHONIOENCODING。
+  // 注意：${workspaceFolder} 仅由 VS Code 解析，不要手动在 PowerShell 里粘贴此变量。
   "code-runner.executorMap": {
-    "python": "python -u"
+    "python": "& 'd:/workspace/langchain-learning/.venv/Scripts/python.exe' -u"
   },
 
-  // 运行前不自动切换焦点到输出，保持终端聚焦，方便输入
   "code-runner.preserveFocus": false,
   "code-runner.clearPreviousOutput": true
 }

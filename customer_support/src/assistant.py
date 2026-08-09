@@ -3,6 +3,9 @@
 本模块不知道 Chroma、DeepSeek 或 Ollama 如何初始化，只依赖两个最小能力：
 Retriever 能按问题返回 Document，ChatModel 能按消息生成回答。这样业务规则既能
 连接真实 LangChain 组件，也能在测试中换成不会联网的 Fake。
+
+阅读主线：``ask(问题) → 检索证据 → 无证据拒答 / 有证据生成 → 附上真实来源``。
+“检索”和“生成”是两件事：前者找资料，后者把资料改写成自然语言。
 """
 
 from __future__ import annotations
@@ -14,7 +17,7 @@ from typing import Protocol
 from langchain_core.documents import Document
 from langchain_core.prompts import ChatPromptTemplate
 
-# 拒答文案集中定义，正式代码和测试共享同一个业务约定。
+# 拒答文案集中定义，正式代码和测试共享同一个业务约定，避免两处文字悄悄不一致。
 REFUSAL = "知识库中没有足够信息，请转人工客服。"
 
 # Prompt 只约束“拿到证据以后怎样回答”。是否有足够证据不能只靠这段文字，
@@ -32,30 +35,43 @@ PROMPT = ChatPromptTemplate.from_messages(
 
 
 class Retriever(Protocol):
-    """只描述 assistant 真正需要的检索能力，而不是绑定 Chroma 具体类型。"""
+    """描述 assistant 需要的检索能力，而不是绑定某个具体数据库。
+
+    只要一个对象有同样的 ``invoke`` 方法，就可以作为 Retriever 使用；这样 Chroma
+    与测试中的 FakeRetriever 都能接入。
+    """
 
     def invoke(self, question: str) -> list[Document]: ...
 
 
 class ChatModel(Protocol):
-    """真实聊天模型与测试 FakeModel 都要提供 invoke 方法。"""
+    """描述聊天模型的最小能力：接收消息，返回一个带回答内容的对象。"""
 
     def invoke(self, messages): ...
 
 
 @dataclass(frozen=True)
 class SupportAnswer:
-    """返回给主程序/API 的稳定业务结果，不直接泄露 LangChain 内部对象。"""
+    """返回给主程序/API 的稳定业务结果。
+
+    ``@dataclass`` 会自动生成初始化方法等样板代码；``frozen=True`` 表示创建后不能
+    修改字段，防止答案文本和引用来源在传递途中被意外改掉。
+    """
 
     text: str
     sources: tuple[str, ...]
 
 
 class CustomerSupportAssistant:
-    """编排 Retriever 与 LLM，并执行 Day51 的四条核心业务规则。"""
+    """编排 Retriever 与 LLM，并执行客服问答的核心业务规则。
+
+    它是本项目的“业务大脑”：先检查问题、再找证据，证据不足时拒答；只有证据存在
+    才请求大模型组织语言，最后从原始文档生成可追踪的来源列表。
+    """
 
     def __init__(self, retriever: Retriever, model: ChatModel):
         # 依赖从外部传入：bootstrap 使用真实对象，测试使用 Fake 对象。
+        # 因而本类无需知道模型如何联网、向量库如何创建，职责更单一。
         self.retriever = retriever
         self.model = model
 
@@ -70,15 +86,29 @@ class CustomerSupportAssistant:
             raise ValueError("问题不能为空")
 
         # 3. Retriever 返回与问题相关的 Document；每个 Document 包含正文和 metadata。
+        # metadata 是“描述数据的数据”，这里用它保存来源文件名和文档块编号。
         documents = self.retriever.invoke(normalized)
 
-        # 4. 阈值过滤后没有 Document 时直接拒答。这里故意不调用 model。
+        return self.answer_from_documents(normalized, documents)
+
+    def answer_from_documents(
+        self, question: str, documents: list[Document]
+    ) -> SupportAnswer:
+        """根据已经检索到的资料生成回答，不再次执行检索。
+
+        ``ask`` 和 LangGraph 工作流都会复用这个方法：前者自己先检索，后者已经在
+        ``retrieve`` 节点取得文档。集中这段逻辑可保证两条路径的拒答、模型异常和来源
+        规则完全一致。
+        """
+
+        # 阈值过滤后没有 Document 时直接拒答。这里故意不调用 model。
         if not documents:
             return SupportAnswer(REFUSAL, ())
 
-        # 5. 只把本次实际检索到的正文组合成模型上下文。
+        # 只把本次实际检索到的正文组合成模型上下文。
+        # ``\n\n`` 是两个换行，能让不同文档块之间有清晰分隔。
         context = "\n\n".join(document.page_content for document in documents)
-        messages = PROMPT.invoke({"context": context, "question": normalized}).to_messages()
+        messages = PROMPT.invoke({"context": context, "question": question}).to_messages()
 
         # 6. 模型负责把证据组织成自然语言，不负责决定引用来源。
         # 模型调用可能失败（如 Ollama 临时不可用返回 502、网络中断等），
@@ -93,7 +123,7 @@ class CustomerSupportAssistant:
         # LangChain ChatModel 通常返回带 content 的 AIMessage；兼容测试中的简单对象。
         answer = str(getattr(response, "content", response)).strip() or REFUSAL
 
-        # 7. 引用只从 Document.metadata 生成。dict.fromkeys 在保留顺序的同时去重。
+        # 引用只从 Document.metadata 生成。dict.fromkeys 在保留顺序的同时去重。
         # Path(...).name 只暴露文件名，不把开发者本机绝对路径返回给用户。
         sources = tuple(
             dict.fromkeys(
