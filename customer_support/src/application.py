@@ -10,11 +10,10 @@
 from dataclasses import dataclass
 from typing import Protocol
 
-from scipy.stats import ansari
-
 from src.assistant import SupportAnswer
 from src.conversation import History, Turn
 from src.orders import OrderRepository
+from src.tickets import TicketStore, escalate
 from src.tool_runner import call_read_only
 
 
@@ -51,7 +50,8 @@ class SupportApplication:
     def __init__(self,
                  assistant: Assistant,
                  history: History,
-                 orders: OrderRepository | None = None):
+                 orders: OrderRepository | None = None,
+                 tickets: TicketStore | None = None):
         """保存问答助手、历史记录和订单仓库三个外部依赖。
 
         这种写法让调用方决定使用真实模型还是测试替身、内存历史还是未来的数据库历史，
@@ -61,6 +61,7 @@ class SupportApplication:
         self.history = history
         # 未提供仓库时使用空的内存仓库，让原有的纯知识问答调用仍能正常装配。
         self.orders = orders or OrderRepository([])
+        self.tickets = tickets or TicketStore()
 
     def handle(self,
                question: str,
@@ -107,8 +108,8 @@ class SupportApplication:
             tenant_id=tenant_id,
             user_id=user_id,
         )
-        return ApplicationResult(answer)
-
+        ticket = escalate(self.tickets, user_id, question, bool(answer.sources))
+        return ApplicationResult(answer, ticket.ticket_id if ticket else None)
 
     def ask(self, question: str, **kwargs) -> SupportAnswer:
         """兼容原有调用方：执行完整处理，但只返回其中的客服答案。"""

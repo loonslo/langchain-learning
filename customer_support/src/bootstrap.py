@@ -15,6 +15,7 @@ from .conversation import History
 from .knowledge import build_retriever
 from .orders import OrderRepository
 from .settings import Settings
+from .tickets import TicketStore
 from .workflow import WorkflowAssistant
 
 
@@ -31,31 +32,21 @@ def build_embeddings(model_name: str, device: str):
 
 
 def build_chat_model(settings: Settings):
-    """按配置创建聊天模型，并把不同供应商统一为 ``invoke`` 接口。"""
+    """创建 DeepSeek 聊天模型，并暴露统一的 ``invoke`` 接口。"""
 
-    # provider（供应商）决定模型运行在本机还是通过网络调用。
-    if settings.llm_provider == "ollama":
-        from langchain_ollama import ChatOllama
+    if settings.llm_provider != "deepseek":
+        raise ValueError(f"当前版本仅支持 DeepSeek，收到 LLM_PROVIDER={settings.llm_provider}")
+    # 在发送网络请求前检查密钥，给出比底层 401 更直接的错误信息。
+    if not settings.llm_api_key:
+        raise RuntimeError("使用 DeepSeek 时必须配置 LLM_API_KEY")
+    from langchain_openai import ChatOpenAI
 
-        # Ollama 在本机运行，通常不需要 API Key（访问密钥）。
-        return ChatOllama(
-            model=settings.llm_model,
-            base_url=settings.llm_base_url,
-            temperature=0,
-        )
-    if settings.llm_provider == "deepseek":
-        # 在发送网络请求前检查密钥，给出比底层 401 更直接的错误信息。
-        if not settings.llm_api_key:
-            raise RuntimeError("使用 DeepSeek 时必须配置 LLM_API_KEY")
-        from langchain_openai import ChatOpenAI
-
-        return ChatOpenAI(
-            model=settings.llm_model,
-            base_url=settings.llm_base_url,
-            api_key=settings.llm_api_key,
-            temperature=0,
-        )
-    raise ValueError(f"暂不支持 LLM_PROVIDER={settings.llm_provider}")
+    return ChatOpenAI(
+        model=settings.llm_model,
+        base_url=settings.llm_base_url,
+        api_key=settings.llm_api_key,
+        temperature=0,
+    )
 
 
 def build_assistant(settings: Settings | None = None) -> CustomerSupportAssistant:
@@ -88,4 +79,5 @@ def build_application(settings: Settings | None = None) -> SupportApplication:
         History(max_turns=3),
         # 当前是学习用空仓库；以后可在这里替换成数据库实现，而不改应用层调用方式。
         OrderRepository([]),
+        TicketStore(),
     )

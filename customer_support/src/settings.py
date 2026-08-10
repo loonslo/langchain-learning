@@ -1,7 +1,7 @@
 """读取多文档知识库、评测集和模型配置。
 
 配置放在环境变量或 ``.env`` 文件中，而非写死在代码里。这样密钥不会进入 Git，
-同一套代码也可在本地 Ollama 和 DeepSeek 之间切换。
+模型服务统一使用 DeepSeek；embedding 仍可在本地运行，不需要把文本向量请求发送到云端。
 """
 
 from __future__ import annotations
@@ -39,18 +39,22 @@ class Settings:
 
     @classmethod
     def from_env(cls) -> "Settings":
-        """从环境变量读取配置；缺失时使用适合本机入门的默认值。"""
-        # ``strip`` 去掉意外空格，``lower`` 统一英文大小写，避免 ``Ollama`` 识别失败。
-        provider = os.getenv("LLM_PROVIDER", "ollama").strip().lower()
-        default_model = "deepseek-chat" if provider == "deepseek" else "qwen3.5:9b"
-        default_base_url = (
-            "https://api.deepseek.com" if provider == "deepseek" else "http://localhost:11434"
-        )
+        """从环境变量读取配置；当前版本只接受 DeepSeek 作为聊天模型服务。"""
+        # ``strip`` 去掉意外空格，``lower`` 统一英文大小写；其他 provider 直接失败，
+        # 避免配置残留时程序悄悄尝试连接本地 Ollama。
+        provider = os.getenv("LLM_PROVIDER", "deepseek").strip().lower()
+        if provider != "deepseek":
+            raise ValueError(
+                f"当前版本仅支持 DeepSeek，收到 LLM_PROVIDER={provider!r}；"
+                "请将 LLM_PROVIDER 设置为 deepseek"
+            )
+        default_model = "deepseek-chat"
+        default_base_url = "https://api.deepseek.com"
         # ``cls(...)`` 表示创建当前类的实例；用它而非写死 Settings，子类也能复用该方法。
         return cls(
             knowledge_path=PROJECT_ROOT / "data" / "knowledge",
-            # 默认使用本机已下载的本地模型，避免每次运行都访问 Hugging Face Hub。
-            # 需要换回在线模型或指定其他本地路径时，设置环境变量 EMBED_MODEL_PATH 即可。
+            # embedding 默认使用本机已下载的模型，避免每次运行都访问 Hugging Face Hub；
+            # 它只负责知识库检索向量，不是聊天模型，也不改变 DeepSeek 的选择。
             embedding_model=os.getenv("EMBED_MODEL_PATH", "D:/models/bge-small-zh-v1.5"),
             embedding_device=os.getenv("EMBED_DEVICE", "cpu").strip().lower(),
             llm_provider=provider,

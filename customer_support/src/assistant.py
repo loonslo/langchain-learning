@@ -1,6 +1,6 @@
 """实现一次完整的客服知识问答业务用例。
 
-本模块不知道 Chroma、DeepSeek 或 Ollama 如何初始化，只依赖两个最小能力：
+本模块不知道 Chroma 或 DeepSeek 如何初始化，只依赖两个最小能力：
 Retriever 能按问题返回 Document，ChatModel 能按消息生成回答。这样业务规则既能
 连接真实 LangChain 组件，也能在测试中换成不会联网的 Fake。
 
@@ -111,7 +111,7 @@ class CustomerSupportAssistant:
         messages = PROMPT.invoke({"context": context, "question": question}).to_messages()
 
         # 6. 模型负责把证据组织成自然语言，不负责决定引用来源。
-        # 模型调用可能失败（如 Ollama 临时不可用返回 502、网络中断等），
+        # 模型调用可能失败（如 DeepSeek 网络中断、接口暂时不可用等），
         # 这里捕获异常并给出友好提示，而不是直接让整个会话崩溃退出。
         try:
             response = self.model.invoke(messages)
