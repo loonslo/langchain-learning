@@ -13,6 +13,7 @@ from .application import SupportApplication
 from .assistant import CustomerSupportAssistant
 from .conversation import History
 from .knowledge import build_retriever
+from .orders import OrderRepository
 from .settings import Settings
 from .workflow import WorkflowAssistant
 
@@ -76,7 +77,15 @@ def build_assistant(settings: Settings | None = None) -> CustomerSupportAssistan
     )
     return CustomerSupportAssistant(retriever, build_chat_model(settings))
 
+
 def build_application(settings: Settings | None = None) -> SupportApplication:
-    """正式主程序使用这个入口；离线评测仍可直接构建底层 assistant。"""
+    """装配工作流、会话历史和订单仓库；离线评测仍可只构建底层 assistant。"""
+
+    # WorkflowAssistant 把 RAG 规则放进 LangGraph；History 保存近期追问上下文。
     assistant = WorkflowAssistant(build_assistant(settings))
-    return SupportApplication(assistant, History(max_turns=3))
+    return SupportApplication(
+        assistant,
+        History(max_turns=3),
+        # 当前是学习用空仓库；以后可在这里替换成数据库实现，而不改应用层调用方式。
+        OrderRepository([]),
+    )
