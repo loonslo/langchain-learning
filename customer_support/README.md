@@ -39,7 +39,7 @@ Working directory: D:\workspace\langchain-learning\customer_support
   → 答案和真实来源
 ```
 
-默认使用本机 Ollama `qwen3.5:9b`，embedding 默认运行在 CPU。Day54 是本地可运行里程碑，持久化 API、身份、租户隔离和部署能力将在后续日期继续接入同一产品主链。
+当前聊天模型统一使用 DeepSeek `deepseek-chat`，需要在本机 `.env` 中配置 `LLM_API_KEY`；embedding 默认运行在 CPU。Ollama 适配器文件仅作为历史学习材料保留，不会被产品装配入口加载。持久化 API、身份、租户隔离和部署能力将在后续日期继续接入同一产品主链。
 
 ## 零基础阅读路线
 
@@ -54,7 +54,7 @@ Working directory: D:\workspace\langchain-learning\customer_support
 5. `src/assistant.py`：核心业务规则。重点看“没有证据就拒答、有证据才调用模型、来源来自文档”。
 6. `src/ingestion.py` 和 `knowledge.py`：资料如何从 Markdown 切成小块，再交给 Chroma 和关键词检索。
 7. `src/retrieval.py`：为什么要同时使用语义检索与关键词检索，以及如何用 RRF 合并结果。
-6. `tests/`：每个测试都是一个可运行的小例子；先读 `test_assistant.py`，能最快理解核心规则如何被验证。
+8. `tests/`：每个测试都是一个可运行的小例子；先读 `test_assistant.py`，能最快理解核心规则如何被验证。
 
 ### 先认识四个词
 

@@ -1,4 +1,6 @@
-"""验证环境变量缺失、供应商切换和密钥优先级这三类配置场景。"""
+"""验证 DeepSeek 默认配置、供应商限制和密钥优先级。"""
+
+import pytest
 
 from src.settings import Settings
 
@@ -19,17 +21,26 @@ def clear_llm_environment(monkeypatch):
         monkeypatch.delenv(name, raising=False)
 
 
-def test_defaults_to_local_ollama(monkeypatch):
-    # 不设置任何变量时应能离线启动本机 Ollama，这是初学者的默认体验。
+def test_defaults_to_deepseek(monkeypatch):
+    # 不设置 provider 时默认使用 DeepSeek，避免启动时误连本机 Ollama。
     clear_llm_environment(monkeypatch)
 
     settings = Settings.from_env()
 
-    assert settings.llm_provider == "ollama"
-    assert settings.llm_model == "qwen3.5:9b"
-    assert settings.llm_base_url == "http://localhost:11434"
+    assert settings.llm_provider == "deepseek"
+    assert settings.llm_model == "deepseek-chat"
+    assert settings.llm_base_url == "https://api.deepseek.com"
     assert settings.llm_api_key == ""
     assert settings.embedding_device == "cpu"
+
+
+def test_non_deepseek_provider_is_rejected(monkeypatch):
+    # 明确拒绝旧 Ollama 配置，避免用户以为项目仍支持本地聊天模型。
+    clear_llm_environment(monkeypatch)
+    monkeypatch.setenv("LLM_PROVIDER", "ollama")
+
+    with pytest.raises(ValueError, match="仅支持 DeepSeek"):
+        Settings.from_env()
 
 
 def test_deepseek_uses_provider_defaults_and_existing_key_name(monkeypatch):

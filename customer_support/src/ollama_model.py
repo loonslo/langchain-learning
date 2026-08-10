@@ -1,4 +1,4 @@
-"""为本地 Ollama 提供最小的 LangChain 风格聊天模型适配器。
+"""历史遗留的 Ollama 适配器，仅供对照学习，当前产品入口不会加载它。
 
 适配器的作用像插头转换器：项目其余部分只认识 ``invoke(messages)``，而本模块
 把这种统一调用翻译成 Ollama HTTP API 所需的 JSON 请求。
