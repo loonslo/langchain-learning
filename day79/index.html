@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#10233f" />
+    <title>Nova · Customer Support Copilot</title>
+  </head>
+  <body>
+    <div id="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <div class="brand-mark">N</div>
+          <div>
+            <div class="brand-name">NOVA</div>
+            <div class="brand-caption">CUSTOMER OPERATIONS</div>
+          </div>
+        </div>
+
+        <div class="side-section-label">WORKSPACE</div>
+        <div class="workspace-switcher">
+          <div class="workspace-avatar">CS</div>
+          <div>
+            <strong>客服知识中台</strong>
+            <span>Day79 integration</span>
+          </div>
+          <span class="switcher-arrow">⌄</span>
+        </div>
+
+        <nav class="side-nav" aria-label="功能导航">
+          <button class="side-nav-item active" type="button">
+            <span class="nav-glyph">✦</span>
+            <span>智能问答</span>
+            <b>LIVE</b>
+          </button>
+          <button class="side-nav-item" type="button" data-scroll="evidence-panel">
+            <span class="nav-glyph">◌</span>
+            <span>证据中心</span>
+          </button>
+          <button class="side-nav-item" type="button" data-scroll="connection-panel">
+            <span class="nav-glyph">⌁</span>
+            <span>连接设置</span>
+          </button>
+        </nav>
+
+        <div class="sidebar-spacer"></div>
+        <div class="learning-card">
+          <span class="learning-icon">✧</span>
+          <div>
+            <strong>Day79 · 前端对接</strong>
+            <p>页面只负责体验，所有回答仍来自 Day78 API。</p>
+          </div>
+        </div>
+        <div class="sidebar-footer">
+          <span class="small-status-dot" id="side-status-dot"></span>
+          <span id="side-status-text">检查后端中</span>
+          <span class="version">v0.1</span>
+        </div>
+      </aside>
+
+      <main class="main-content">
+        <header class="topbar">
+          <div>
+            <div class="breadcrumb"><span>DAY79</span><i>/</i> FRONTEND INTEGRATION</div>
+            <h1>客服与工单 <em>Copilot</em></h1>
+            <p>把 Day78 的 RAG、会话、订单工具和人工升级，变成一个可以操作的工作台。</p>
+          </div>
+          <div class="top-actions">
+            <div class="connection-pill" id="connection-pill"><span class="status-dot"></span><span>连接中</span></div>
+            <button class="new-session-button" id="new-session" type="button"><span>＋</span> 新会话</button>
+          </div>
+        </header>
+
+        <section class="metrics-strip" aria-label="项目能力概览">
+          <div class="metric"><span class="metric-icon blue">◈</span><div><small>KNOWLEDGE</small><strong>混合检索</strong></div></div>
+          <div class="metric"><span class="metric-icon violet">◌</span><div><small>TRACEABILITY</small><strong>来源可追溯</strong></div></div>
+          <div class="metric"><span class="metric-icon green">↗</span><div><small>SESSION</small><strong>会话隔离</strong></div></div>
+          <div class="metric"><span class="metric-icon orange">▣</span><div><small>OPERATIONS</small><strong>订单与工单</strong></div></div>
+        </section>
+
+        <div class="workspace-grid">
+          <section class="chat-panel" aria-label="客服对话面板">
+            <div class="panel-header">
+              <div class="agent-info">
+                <div class="agent-avatar">✦</div>
+                <div><strong>Nova 客服助手</strong><span><i></i> Day78 API · 已连接知识库</span></div>
+              </div>
+              <div class="session-id"><small>SESSION</small><code id="session-id">web-...</code></div>
+            </div>
+
+            <div class="messages" id="messages" aria-live="polite"></div>
+
+            <div class="quick-prompts">
+              <span>快速开始</span>
+              <button type="button" data-prompt="退款多久到账？">退款多久到账？</button>
+              <button type="button" data-prompt="商品发货后可以修改地址吗？">可以修改地址吗？</button>
+              <button type="button" data-prompt="开发票需要哪些信息？">开发票需要什么？</button>
+            </div>
+
+            <form class="composer" id="chat-form">
+              <textarea id="question" rows="1" maxlength="500" placeholder="输入问题，开始和客服助手对话……" aria-label="输入问题"></textarea>
+              <div class="composer-bottom">
+                <span class="composer-tip"><kbd>Enter</kbd> 发送 · <kbd>Shift</kbd> + <kbd>Enter</kbd> 换行</span>
+                <button class="send-button" id="send-button" type="submit"><span>发送</span><b>↗</b></button>
+              </div>
+            </form>
+          </section>
+
+          <aside class="right-rail">
+            <section class="rail-card connection-card" id="connection-panel">
+              <div class="rail-heading"><div><small>DAY78 API</small><h2>连接后端</h2></div><span class="rail-icon key">⌁</span></div>
+              <p>Day78 使用 JWT 保护 API。把本地生成的 token 粘贴到这里，前端会保存到当前浏览器。</p>
+              <label for="access-token">Access token</label>
+              <textarea id="access-token" rows="3" placeholder="eyJhbGciOiJIUzI1NiIs..."></textarea>
+              <div class="connection-actions"><button class="primary-small" id="save-token" type="button">连接并保存</button><button class="text-button" id="clear-token" type="button">清除</button></div>
+              <div class="token-state" id="token-state"><span class="state-dot"></span><span>尚未连接身份</span></div>
+            </section>
+
+            <section class="rail-card order-card">
+              <div class="rail-heading"><div><small>READ-ONLY TOOL</small><h2>订单查询</h2></div><span class="rail-icon orange">▣</span></div>
+              <p>填写订单号后发送问题，API 会进入受控订单查询分支。</p>
+              <label for="order-id">订单号 <em>可选</em></label>
+              <div class="order-field"><input id="order-id" maxlength="50" placeholder="例如 A10086" /><button id="clear-order" type="button" aria-label="清除订单号">×</button></div>
+            </section>
+
+            <section class="rail-card evidence-card" id="evidence-panel">
+              <div class="rail-heading"><div><small>TRACEABILITY</small><h2>响应证据</h2></div><span class="rail-icon blue">◌</span></div>
+              <div class="evidence-empty" id="evidence-empty"><span>↗</span><p>发送问题后，这里会显示来源、工单和反馈状态。</p></div>
+              <div class="evidence-content" id="evidence-content" hidden>
+                <div class="answer-type" id="answer-type">KNOWLEDGE ANSWER</div>
+                <div class="evidence-message" id="evidence-message"></div>
+                <div class="evidence-list" id="evidence-list"></div>
+                <div class="ticket-row" id="ticket-row" hidden><span>工单</span><code id="ticket-id"></code></div>
+                <div class="feedback-row" id="feedback-row" hidden><span>这次回答有帮助吗？</span><div><button type="button" data-rating="1">有帮助</button><button type="button" data-rating="-1">需改进</button></div></div>
+              </div>
+            </section>
+          </aside>
+        </div>
+
+        <footer class="footer"><span>Day79 Frontend Integration</span><i>·</i><span>Vite SPA · Day78 FastAPI</span><i>·</i><span>RAG · Auth · Evidence</span></footer>
+      </main>
+    </div>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
