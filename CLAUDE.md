@@ -4,14 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-A Chinese-language LangChain learning curriculum for a test engineer transitioning to AI application development. Day1–50 are focused exercises; Day51–78 are one cumulative multi-tenant customer-service and ticket Copilot under `capstone/`.
+A Chinese-language LangChain learning curriculum for a test engineer transitioning to AI application development. Day1–50 are focused exercises under `day01/`–`day50/`; Day51–78 are one cumulative multi-tenant customer-service and ticket Copilot under `capstone/`.
 
 ## Architecture
 
 ```
 common.py                        # Shared backbone: LLM factory (DeepSeek), embedding cache, Chinese separators
-day01_*.py ... day50_*.py        # Focused prerequisite exercises
-day51_*.py ... day78_*.py        # Current cumulative-project task cards, not duplicate demos
+day01/ ... day50/                # Focused prerequisite exercises (one directory per day)
+day51/ ... day78/                # Cumulative-project daily change sets
 capstone/                        # Business implementation accumulated by Day51–78
   config.py                      #   Imports common.py, adds project paths (DOCS_DIR, CHROMA_DIR, DB_PATH etc.)
   knowledge_base.py              #   Hybrid retrieval (vector + BM25) + Chroma persistence + source citation
@@ -25,7 +25,7 @@ capstone/                        # Business implementation accumulated by Day51�
 evals/                           # Standalone evaluation platform module
   run_eval_platform.py           #   Quality + cost + latency + failure analysis + regression history
   dashboard.py                   #   Generates reports/dashboard.html
-  prompt_ab_judge_agreement.py   #   Compatibility entry; Day24 implementation lives in day24_prompt_ab_judge.py
+  prompt_ab_judge_agreement.py   #   Compatibility entry; Day24 implementation lives in day24/day24_prompt_ab_judge.py
   agent_trajectory_eval.py       #   Agent trajectory evaluation
 reports/                         # Generated outputs: eval_runs.csv, failures.json, latest_report.md, dashboard.html
 ```
@@ -49,7 +49,7 @@ python -m capstone.project_baseline --json
 python -m evals.run_eval_platform                    # Offline mode (demo answers)
 python -m evals.run_eval_platform --mode live        # Live mode (requires DEEPSEEK_API_KEY)
 python -m evals.dashboard                            # Generate HTML dashboard
-python day24_prompt_ab_judge.py                      # Prompt A/B testing
+python day24/day24_prompt_ab_judge.py                # Prompt A/B testing
 python -m evals.agent_trajectory_eval                # Agent trajectory evaluation
 ```
 
@@ -62,7 +62,7 @@ python -m capstone.main eval                         # Run evaluation + report
 
 ### Testing (pytest is the primary test framework)
 ```bash
-pytest day48_pytest_regression.py -v                 # RAG regression tests
+pytest day48/day48_pytest_regression.py -v           # RAG regression tests
 pytest capstone/test_regression.py -v                # Capstone regression tests
 pytest test_day47.py -v                              # Security guardrails (injection detection, PII masking, secret scrubbing)
 pytest test_day44.py -v                              # SQLite data layer (injection, WAL concurrency, migration)
@@ -78,18 +78,18 @@ locust -f capstone/load_test.py --host http://127.0.0.1:8000
 
 ### LoRA fine-tuning (regression gate, exit code 1 if adapter is not better than base)
 ```bash
-python day49_lora_finetune.py --smoke                                   # tiny model, CPU seconds, flow only, no quality assertion
-python day49_lora_finetune.py                                           # Qwen2.5-0.5B-Instruct, ~4min on CPU; base-vs-adapter gate
-python day49_lora_finetune.py --base <path-or-repo> --epochs 20         # HF_ENDPOINT=https://hf-mirror.com if HF is unreachable
-python day49_lora_finetune.py --export-llamafactory                     # emit equivalent LLaMA-Factory dataset + YAML (no training)
+python day49/day49_lora_finetune.py --smoke                             # tiny model, CPU seconds, flow only, no quality assertion
+python day49/day49_lora_finetune.py                                     # Qwen2.5-0.5B-Instruct, ~4min on CPU; base-vs-adapter gate
+python day49/day49_lora_finetune.py --base <path-or-repo> --epochs 20   # HF_ENDPOINT=https://hf-mirror.com if HF is unreachable
+python day49/day49_lora_finetune.py --export-llamafactory               # emit equivalent LLaMA-Factory dataset + YAML (no training)
 ```
 
 ### Services
 ```bash
-uvicorn day41_serve_fastapi:app --reload             # Day41 FastAPI service
+uvicorn day41.day41_serve_fastapi:app --reload       # Day41 FastAPI service
 uvicorn capstone.api_enterprise:app --reload         # Capstone API (http://127.0.0.1:8000/docs)
 streamlit run capstone/app_streamlit.py              # Capstone Streamlit UI
-python day40_mcp_server_http.py                      # Day40 remote MCP server (streamable-http, :8000/mcp)
+python day40/day40_mcp_server_http.py                # Day40 remote MCP server (streamable-http, :8000/mcp)
 ```
 
 ### Docker

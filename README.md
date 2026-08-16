@@ -40,87 +40,87 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 
 ## 课程地图（Day1-78）
 
-> Day1–50 使用独立练习文件建立基础；Day51–78 使用“每日完整变更集”推进同一个项目。每天除了新增文件，还必须展示被改写的旧文件和继续参与主链但未改的文件。README 记录当天完整结构，未修改文件不重复复制，并可用 `tools/materialize_day.py` 还原任意一天。
+> Day1–50 使用按天归档的独立练习目录建立基础；Day51–78 使用“每日完整变更集”推进同一个项目。每天除了新增文件，还必须展示被改写的旧文件和继续参与主链但未改的文件。README 记录当天完整结构，未修改文件不重复复制，并可用 `tools/materialize_day.py` 还原任意一天。
 
 ### 阶段0 固本 + 裸写 harness（Day1-11）
 
 | Day | 文件 | 概念 |
 |-----|------|------|
-| 1 | `day01_first_chat.py` | 基础调用 + Prompt + LCEL 管道 |
-| 2 | `day02_control_output.py` | 控制输出：temperature + 流式 |
-| 3 | `day03_structured_output.py` | 结构化输出：Pydantic |
-| 4 | `day04_memory_chat.py` | 多轮记忆 |
-| 5 | `day05_tool_calling.py` | 工具调用 |
-| 6 | `day06_chatbot_project.py` | 综合项目：记忆+工具+多角色 |
-| 7 | `day07_rag_load_split.py` | RAG：加载 + 切割 |
-| 8 | `day08_rag_embed_retrieve.py` | RAG：向量化 + 检索 |
-| 9 | `day09_minimal_rag.py` | 最小 RAG：完整问答（MMR、拒答）+ 提示工程 |
-| 10 | `day10_raw_sdk_rag_agent_loop.py` | 裸 SDK 手写 RAG + agent loop（理解 harness）|
-| 11 | `day11_llm_principles.py` | LLM 原理认知（token/embedding/attention/幻觉）|
+| 1 | `day01/day01_first_chat.py` | 基础调用 + Prompt + LCEL 管道 |
+| 2 | `day02/day02_control_output.py` | 控制输出：temperature + 流式 |
+| 3 | `day03/day03_structured_output.py` | 结构化输出：Pydantic |
+| 4 | `day04/day04_memory_chat.py` | 多轮记忆 |
+| 5 | `day05/day05_tool_calling.py` | 工具调用 |
+| 6 | `day06/day06_chatbot_project.py` | 综合项目：记忆+工具+多角色 |
+| 7 | `day07/day07_rag_load_split.py` | RAG：加载 + 切割 |
+| 8 | `day08/day08_rag_embed_retrieve.py` | RAG：向量化 + 检索 |
+| 9 | `day09/day09_minimal_rag.py` | 最小 RAG：完整问答（MMR、拒答）+ 提示工程 |
+| 10 | `day10/day10_raw_sdk_rag_agent_loop.py` | 裸 SDK 手写 RAG + agent loop（理解 harness）|
+| 11 | `day11/day11_llm_principles.py` | LLM 原理认知（token/embedding/attention/幻觉）|
 
 ### 阶段1 RAG 进阶（Day12-17）
 
 | Day | 文件 | 概念 |
 |-----|------|------|
-| 12 | `day12_rag_pdf_sources.py` | 处理真实 PDF + 来源溯源 + 封装 |
-| 13 | `day13_rag_chunk_strategy.py` | chunk 策略对比 |
-| 14 | `day14_rag_hybrid_search.py` | 混合检索：向量 + BM25 |
-| 15 | `day15_rag_query_rewrite.py` | 查询改写：Multi-Query + HyDE + Context Engineering |
-| 16 | `day16_rag_chroma_persist.py` | 向量库持久化：Chroma |
-| 17 | `day17_rag_multimodal_rerank.py` | 多模态读图 + reranker |
+| 12 | `day12/day12_rag_pdf_sources.py` | 处理真实 PDF + 来源溯源 + 封装 |
+| 13 | `day13/day13_rag_chunk_strategy.py` | chunk 策略对比 |
+| 14 | `day14/day14_rag_hybrid_search.py` | 混合检索：向量 + BM25 |
+| 15 | `day15/day15_rag_query_rewrite.py` | 查询改写：Multi-Query + HyDE + Context Engineering |
+| 16 | `day16/day16_rag_chroma_persist.py` | 向量库持久化：Chroma |
+| 17 | `day17/day17_rag_multimodal_rerank.py` | 多模态读图 + reranker |
 
 ### 阶段2 RAG + Agent 双评测 ★护城河（Day18-27）
 
 | Day | 文件 | 概念 |
 |-----|------|------|
-| 18 | `day18_eval_basics.py` | 评测集 + 手写三大指标 |
-| 19 | `day19_eval_llm_judge.py` | LLM-as-judge：正确性/忠实度 |
-| 20 | `day20_eval_dataset_build.py` | 造评测集（上）：schema + 事实/跨段落 |
-| 21 | `day21_eval_dataset_ragas.py` | 造评测集（下）：拒答/引用 + RAGAS/DeepEval |
-| 22 | `day22_langsmith_eval.py` | LangSmith trace + 在线评估 |
-| 23 | `day23_eval_regression_curve.py` | 评测集版本化 + 回归曲线（→ `evals/run_eval_platform`）|
-| 24 | `day24_prompt_ab_judge.py` | prompt A/B + judge 一致性（独立可运行）|
-| 25 | `day25_agent_trajectory_eval.py` | Agent 轨迹评测（→ `evals/agent_trajectory_eval`）|
-| 26 | `day26_eval_report_failures.py` | 生产级失败诊断（DeepEval 维度分）+ 质量门禁（框架分判决 + 趋势守护）。原 day27 门禁已并入本天 |
-| ~~27~~ | ~~`day27_eval_dashboard.py`~~ | 已合并进 day26：诊断与门禁是同一动作的前后段，拆两天会误以为是两个并列能力；真正「接进 CI」的部署篇见 Day58（capstone/ci_gate.py + .github/workflows/eval-gate.yml）|
+| 18 | `day18/day18_eval_basics.py` | 评测集 + 手写三大指标 |
+| 19 | `day19/day19_eval_llm_judge.py` | LLM-as-judge：正确性/忠实度 |
+| 20 | `day20/day20_eval_dataset_build.py` | 造评测集（上）：schema + 事实/跨段落 |
+| 21 | `day21/day21_eval_dataset_ragas.py` | 造评测集（下）：拒答/引用 + RAGAS/DeepEval |
+| 22 | `day22/day22_langsmith_eval.py` | LangSmith trace + 在线评估 |
+| 23 | `day23/day23_eval_regression_curve.py` | 评测集版本化 + 回归曲线（→ `evals/run_eval_platform`）|
+| 24 | `day24/day24_prompt_ab_judge.py` | prompt A/B + judge 一致性（独立可运行）|
+| 25 | `day25/day25_agent_trajectory_eval.py` | Agent 轨迹评测（→ `evals/agent_trajectory_eval`）|
+| 26 | `day26/day26_eval_report_failures.py` | 生产级失败诊断（DeepEval 维度分）+ 质量门禁（框架分判决 + 趋势守护）。原 day27 门禁已并入本天 |
+| ~~27~~ | ~~`day27/day27_eval_dashboard.py`~~ | 已合并进 day26：诊断与门禁是同一动作的前后段，拆两天会误以为是两个并列能力；真正「接进 CI」的部署篇见 Day58（capstone/ci_gate.py + .github/workflows/eval-gate.yml）|
 
 ### 阶段3 Agent / LangGraph（Day28-40）
 
 | Day | 文件 | 概念 |
 |-----|------|------|
-| 28 | `day28_langgraph_basics.py` | LangGraph 入门：State / Node / Edge |
-| 29 | `day29_langgraph_branch_loop.py` | 条件分支 + 循环 + recursion_limit |
-| 30 | `day30_langgraph_tool_agent.py` | 用图重写工具调用（上）|
-| 31 | `day31_langgraph_vs_manual.py` | 重写完成 + 对比手写循环（harness）|
-| 32 | `day32_react_agent.py` | ReAct |
-| 33 | `day33_plan_and_execute.py` | Plan-and-Execute |
-| 34 | `day34_planning_paradigms.py` | 其他规划范式 + AutoGen/CrewAI/A2A（了解）|
-| 35 | `day35_checkpoint_context.py` | 状态持久化 + 上下文管理 |
-| 36 | `day36_streaming_hitl.py` | streaming 中间步骤 + HITL |
-| 37 | `day37_tool_safety_search.py` | 工具安全 + 搜索 Agent（上）|
-| 38 | `day38_text2sql_agent.py` | Text2SQL 结构化数据问答工具 |
-| 39 | `day39_search_agent_eval.py` | 搜索+总结 Agent 完成 + 接轨迹评测 |
-| 40 | `day40_mcp_agent.py` (+ `day40_mcp_server.py`) | MCP 接标准化工具 + A2A 了解 |
+| 28 | `day28/day28_langgraph_basics.py` | LangGraph 入门：State / Node / Edge |
+| 29 | `day29/day29_state_reducer.py` | 状态设计与 reducer |
+| 30 | `day30/day30_react_agent.py` | ReAct |
+| 31 | `day31/day31_node_reliability.py` | 节点容错与重试 |
+| 32 | `day32/day32_structured_routing.py` | 结构化输出路由 |
+| 33 | `day33/day33_plan_and_execute.py` | Plan-and-Execute |
+| 34 | `day34/day34_observability.py` | 可观测性与调试 |
+| 35 | `day35/day35_checkpoint_context.py` | 状态持久化 + 上下文管理 |
+| 36 | `day36/day36_streaming_hitl.py` | streaming 中间步骤 + HITL |
+| 37 | `day37/day37_tool_safety_search.py` | 工具安全 + 搜索 Agent（上）|
+| 38 | `day38/day38_text2sql_agent.py` | Text2SQL 结构化数据问答工具 |
+| 39 | `day39/day39_langgraph_supervisor.py` | Supervisor 多 Agent + Fan-out |
+| 40 | `day40/day40_mcp_agent.py`（同目录含 server/debug 脚本） | MCP 接标准化工具 + A2A 了解 |
 
 ### 阶段4 工程化与可观测（Day41-48）
 
 | Day | 文件 | 概念 |
 |-----|------|------|
-| 41 | `day41_serve_fastapi.py` | FastAPI 服务化 |
-| 42 | `day42_reliability.py` | 异步 + 超时/重试/fallback |
-| 43 | `day43_cost_cache_routing.py` | 成本优化：缓存 + model routing |
-| 44 | `day44_sqlite_persistence.py` | 数据持久化：SQLite |
-| 45 | `day45_trace_docker.py` | trace + Docker 打包 |
-| 46 | `day46_ollama_inference.py` | 推理框架 Ollama（了解）|
-| 47 | `day47_security_guardrails.py` | 安全 guardrails：注入防护 + PII + 密钥 |
-| 48 | `day48_pytest_regression.py` | pytest 回归（接评测集）|
+| 41 | `day41/day41_serve_fastapi.py` | FastAPI 服务化 |
+| 42 | `day42/day42_reliability.py` | 异步 + 超时/重试/fallback |
+| 43 | `day43/day43_cost_cache_routing.py` | 成本优化：缓存 + model routing |
+| 44 | `day44/day44_sqlite_persistence.py` | 数据持久化：SQLite |
+| 45 | `day45/day45_trace_docker.py` | trace + Docker 打包 |
+| 46 | `day46/day46_ollama_inference.py` | 推理框架 Ollama（了解）|
+| 47 | `day47/day47_security_guardrails.py` | 安全 guardrails：注入防护 + PII + 密钥 |
+| 48 | `day48/day48_pytest_regression.py` | pytest 回归（接评测集）|
 
 ### 认知层（Day49-50，穿插，了解为主）
 
 | Day | 文件 | 概念 |
 |-----|------|------|
-| 49 | `day49_lora_finetune.py` | 微调取舍 + 跑一次 LoRA |
-| 50 | `day50_concept_overview.py` | 量化/蒸馏/Flash Attention/5 类输出 扫盲 |
+| 49 | `day49/day49_lora_finetune.py` | 微调取舍 + 跑一次 LoRA |
+| 50 | `day50/day50_concept_overview.py` | 量化/蒸馏/Flash Attention/5 类输出 扫盲 |
 
 ### 阶段5：一个项目的完整开发过程（Day51-78）
 
@@ -132,6 +132,8 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 | 52–60 | [`Day52`](day52/README.md) → [`Day60`](day60/README.md) | 多文档、评测、混合检索、会话、LangGraph、订单、重试、人工、SQLite | 完成 |
 | 61–69 | [`Day61`](day61/README.md) → [`Day69`](day69/README.md) | API、幂等、身份、增量同步、注入、PII、观测、缓存、质量门 | 完成 |
 | 70–78 | [`Day70`](day70/README.md) → [`Day78`](day78/README.md) | 容器、存储迁移、容量、反馈、fallback、恢复、集成、面试证据、验收 | 完成 |
+
+Day28–39 阶段分析文档归档在 [`day28-39/README.md`](day28-39/README.md)。
 
 将数字替换成 51–78 中任意一天，即可还原该日结束时的完整项目：
 
@@ -179,7 +181,7 @@ Day51–Day54 的逐文件衔接说明见 [`docs/Day51-Day54衔接变更总览.m
 
 ```bash
 python -m evals.run_eval_platform        # 质量+成本+延迟+失败库+回归记录
-python day24_prompt_ab_judge.py          # prompt A/B + judge 一致性
+python day24/day24_prompt_ab_judge.py    # prompt A/B + judge 一致性
 python -m evals.agent_trajectory_eval     # Agent 轨迹评测
 python -m evals.dashboard                 # 生成 reports/dashboard.html 看板
 ```

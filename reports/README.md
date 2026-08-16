@@ -1,7 +1,7 @@
 # 评测报告目录
 
 这个目录沉淀阶段2的证据链：多数报告由 `evals/` 下的脚本生成，
-Day24 的 Prompt A/B 报告由根目录 `day24_prompt_ab_judge.py` 生成。
+Day24 的 Prompt A/B 报告由 `day24/day24_prompt_ab_judge.py` 生成。
 
 - `eval_runs.csv`：每次评测的 commit、通过率、延迟、token、成本、失败数。
 - `latest_report.md`：最近一次质量评测摘要。
@@ -16,9 +16,9 @@ Day24 的 Prompt A/B 报告由根目录 `day24_prompt_ab_judge.py` 生成。
 # 1. live 跑评测，产出带真实 retrieval_context 的 failures.json
 python -m evals.run_eval_platform --mode live
 # 2. 用 DeepEval 对失败 case 算可信维度分，并直接做质量门禁（诊断+门禁一站式）
-python day26_eval_report_failures.py --mode live
+python day26/day26_eval_report_failures.py --mode live
 # 3. 可选：仅做趋势门禁（弱信号守护，无需 key），检测通过率严重回归 / 连续下降
-python day26_eval_report_failures.py --input reports/eval_runs.csv
+python day26/day26_eval_report_failures.py --input reports/eval_runs.csv
 # 4. 看板
 python -m evals.dashboard
 ```
