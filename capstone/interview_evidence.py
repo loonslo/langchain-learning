@@ -52,7 +52,7 @@ CARDS = (
         "LLM-as-judge 为什么需要校准？",
         "judge 也有位置、长度和同源模型偏差；上线前要与盲评人工标签比较一致性，"
         "并为不确定样本保留人工复核。",
-        ("day24_prompt_ab_judge.py", "reports/prompt_ab_judge_agreement.json"),
+        ("day24/day24_prompt_ab_judge.py", "reports/prompt_ab_judge_agreement.json"),
     ),
     CheatCard(
         "CI",
