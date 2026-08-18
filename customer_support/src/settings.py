@@ -20,11 +20,6 @@ load_dotenv(PROJECT_ROOT / ".env")
 
 @dataclass(frozen=True)
 class Settings:
-    """应用运行所需的不可变配置集合。
-
-每个字段都带有类型提示，例如 ``Path`` 表示文件路径、``str`` 表示文本，能帮助
-编辑器和初学者发现传错值的问题。
-    """
     knowledge_path: Path
     embedding_model: str
     llm_provider: str
@@ -33,35 +28,31 @@ class Settings:
     llm_api_key: str
     embedding_device: str = "cpu"
     evaluation_path: Path = PROJECT_ROOT / "data" / "eval_cases.json"
+    thread_db_path: Path = PROJECT_ROOT / "data" / "threads.db"
     retrieval_k: int = 3
     relevance_threshold: float = 0.55
     keyword_k: int = 3
 
     @classmethod
     def from_env(cls) -> "Settings":
-        """从环境变量读取配置；当前版本只接受 DeepSeek 作为聊天模型服务。"""
-        # ``strip`` 去掉意外空格，``lower`` 统一英文大小写；其他 provider 直接失败，
-        # 避免配置残留时程序悄悄尝试连接本地 Ollama。
         provider = os.getenv("LLM_PROVIDER", "deepseek").strip().lower()
         if provider != "deepseek":
             raise ValueError(
                 f"当前版本仅支持 DeepSeek，收到 LLM_PROVIDER={provider!r}；"
                 "请将 LLM_PROVIDER 设置为 deepseek"
             )
-        default_model = "deepseek-chat"
-        default_base_url = "https://api.deepseek.com"
-        # ``cls(...)`` 表示创建当前类的实例；用它而非写死 Settings，子类也能复用该方法。
         return cls(
             knowledge_path=PROJECT_ROOT / "data" / "knowledge",
-            # embedding 默认使用本机已下载的模型，避免每次运行都访问 Hugging Face Hub；
-            # 它只负责知识库检索向量，不是聊天模型，也不改变 DeepSeek 的选择。
-            embedding_model=os.getenv("EMBED_MODEL_PATH", "D:/models/bge-small-zh-v1.5"),
+            embedding_model=os.getenv("EMBED_MODEL_PATH", "BAAI/bge-small-zh-v1.5"),
             embedding_device=os.getenv("EMBED_DEVICE", "cpu").strip().lower(),
             llm_provider=provider,
-            llm_model=os.getenv("LLM_MODEL", default_model),
-            llm_base_url=os.getenv("LLM_BASE_URL", default_base_url),
+            llm_model=os.getenv("LLM_MODEL", "deepseek-chat"),
+            llm_base_url=os.getenv("LLM_BASE_URL", "https://api.deepseek.com"),
             llm_api_key=(os.getenv("LLM_API_KEY") or os.getenv("DEEPSEEK_API_KEY", "")),
             evaluation_path=Path(
                 os.getenv("EVAL_CASES_PATH", PROJECT_ROOT / "data" / "eval_cases.json")
+            ),
+            thread_db_path=Path(
+                os.getenv("THREAD_DB_PATH", PROJECT_ROOT / "data" / "threads.db")
             ),
         )

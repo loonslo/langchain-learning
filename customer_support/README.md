@@ -1,18 +1,38 @@
 # 企业客服知识库助手 · Day54 产品版本
 
-这是 Day51～54 累积得到的产品目录。当前主链包含自由问答、多文档摄取、混合检索、来源引用、拒答和离线评测。
+这是 Day51～54 累积得到的后端产品目录。Day79 的独立浏览器前端位于仓库根目录的 `day79/`。
 
-## PyCharm 直接运行
+## Windows、macOS 通用启动方式
 
-只需配置一次：
+建议在项目根目录使用 [uv](https://docs.astral.sh/uv/) 创建统一命名的虚拟环境：
 
-1. 项目解释器选择 `D:\workspace\langchain-learning\.venv\Scripts\python.exe`。
-2. 保持项目根目录 `D:\workspace\langchain-learning\customer_support` 为工作目录；当前代码包名为 `src`，不要把 `src` 单独作为工作目录。
-3. 新建 Python Module 运行配置。
-4. Module name 填 `src.app`。
-5. Working directory 选择 `D:\workspace\langchain-learning\customer_support`。
+```shell
+uv sync --python 3.12
+```
 
-以后直接点击 PyCharm 运行按钮，然后输入自己的问题。输入 `exit` 或 `退出` 结束，不需要配置 `PYTHONPATH`，也不需要填写运行参数。终端中也可运行 `python -m src.app`。
+复制 `.env.example` 为 `.env`，填写真实的 `LLM_API_KEY`，然后运行：
+
+```shell
+uv run python -m src.app
+```
+
+以上命令在 PowerShell、cmd、zsh 和 bash 中相同，不需要添加 PowerShell 的 `&`
+运算符，也不需要手写 `.venv` 中的解释器路径。
+
+## VS Code / PyCharm 直接运行
+
+VS Code 已提供跨平台配置。Code Runner 的 `Run Code` 会通过 `uv` 使用项目环境；若在
+“运行和调试”中选择“运行客服助手”，先执行 `Python: Select Interpreter` 并选择项目的
+`.venv`。两种入口都不需要填写平台专用的解释器路径。
+
+PyCharm 只需选择项目根目录下的 `.venv` 作为解释器，并新建 Python Module 运行配置：
+
+```text
+Module name: src.app
+Working directory: 当前项目根目录
+```
+
+输入 `exit` 或 `退出` 结束。入口必须以模块形式运行，不要把 `src` 单独设为工作目录。
 
 ## 开发验收
 
@@ -20,7 +40,7 @@
 
 ```text
 Module name: src.evaluation
-Working directory: D:\workspace\langchain-learning\customer_support
+Working directory: 当前项目根目录
 ```
 
 自动化测试直接在 PyCharm 中右键 `tests` 目录运行。测试替身只存在于 `tests/`，不会进入主程序。
