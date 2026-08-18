@@ -11,6 +11,7 @@ CONFIG_NAMES = (
     "LLM_BASE_URL",
     "LLM_API_KEY",
     "DEEPSEEK_API_KEY",
+    "EMBED_MODEL_PATH",
     "EMBED_DEVICE",
 )
 
@@ -31,6 +32,7 @@ def test_defaults_to_deepseek(monkeypatch):
     assert settings.llm_model == "deepseek-chat"
     assert settings.llm_base_url == "https://api.deepseek.com"
     assert settings.llm_api_key == ""
+    assert settings.embedding_model == "BAAI/bge-small-zh-v1.5"
     assert settings.embedding_device == "cpu"
 
 

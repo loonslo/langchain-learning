@@ -11,11 +11,12 @@ from __future__ import annotations
 
 from .application import SupportApplication
 from .assistant import CustomerSupportAssistant
-from .conversation import History
+from .conversation import PersistentHistory
 from .knowledge import build_retriever
 from .orders import OrderRepository
 from .settings import Settings
 from .tickets import TicketStore
+from .thread_store import SQLiteThreadStore
 from .workflow import WorkflowAssistant
 
 
@@ -72,12 +73,12 @@ def build_assistant(settings: Settings | None = None) -> CustomerSupportAssistan
 def build_application(settings: Settings | None = None) -> SupportApplication:
     """装配工作流、会话历史和订单仓库；离线评测仍可只构建底层 assistant。"""
 
-    # WorkflowAssistant 把 RAG 规则放进 LangGraph；History 保存近期追问上下文。
+    settings = settings or Settings.from_env()
+    # WorkflowAssistant 把 RAG 规则放进 LangGraph；SQLite 保存近期追问上下文。
     assistant = WorkflowAssistant(build_assistant(settings))
     return SupportApplication(
         assistant,
-        History(max_turns=3),
-        # 当前是学习用空仓库；以后可在这里替换成数据库实现，而不改应用层调用方式。
+        PersistentHistory(SQLiteThreadStore(settings.thread_db_path)),
         OrderRepository([]),
         TicketStore(),
     )

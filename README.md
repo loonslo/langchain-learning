@@ -2,7 +2,7 @@
 
 > 循序渐进的每日代码：从"问一次"到"能查文档、能评测、能上线"，一天一个核心概念。
 > 每个文件开头有「这天学什么」，关键行有注释，能独立运行。
-> 核心课程 Day1–50 建立 AI 应用开发与评测底座；Day51–78 连续开发一个生产导向项目。Day79–88 是可选的 AI 自动化测试 backup 路线。
+> 核心课程 Day1–50 建立 AI 应用开发与评测底座；Day51–78 连续开发一个生产导向项目；Day79 把它接成独立的浏览器前端。Day80–89 是可选的 AI 自动化测试 backup 路线。
 
 ## 环境
 
@@ -122,7 +122,7 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 | 49 | `day49/day49_lora_finetune.py` | 微调取舍 + 跑一次 LoRA |
 | 50 | `day50/day50_concept_overview.py` | 量化/蒸馏/Flash Attention/5 类输出 扫盲 |
 
-### 阶段5：一个项目的完整开发过程（Day51-78）
+### 阶段5：一个项目的完整开发过程（Day51-79）
 
 > Day51 起连续开发同一个“企业客服与工单 Copilot”。每个 `dayNN/` 只保存当天新增或修改的完整文件；当天 README 同时记录项目完整结构，并标明新增、修改、继承但不涉及的文件。
 
@@ -132,6 +132,7 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 | 52–60 | [`Day52`](day52/README.md) → [`Day60`](day60/README.md) | 多文档、评测、混合检索、会话、LangGraph、订单、重试、人工、SQLite | 完成 |
 | 61–69 | [`Day61`](day61/README.md) → [`Day69`](day69/README.md) | API、幂等、身份、增量同步、注入、PII、观测、缓存、质量门 | 完成 |
 | 70–78 | [`Day70`](day70/README.md) → [`Day78`](day78/README.md) | 容器、存储迁移、容量、反馈、fallback、恢复、集成、面试证据、验收 | 完成 |
+| 79 | [`day79/README.md`](day79/README.md) | 独立 Vite 前端、JWT 对接、聊天、来源、反馈和订单入口 | 完成 |
 
 Day28–39 阶段分析文档归档在 [`day28-39/README.md`](day28-39/README.md)。
 
@@ -151,22 +152,64 @@ python tools/day_change_report.py 52
 
 Day51–Day54 的逐文件衔接说明见 [`docs/Day51-Day54衔接变更总览.md`](docs/Day51-Day54衔接变更总览.md)；后续完整主线见 [`docs/Day55-Day78衔接总览.md`](docs/Day55-Day78衔接总览.md)。
 
-### 可选补充：AI 自动化测试 backup（Day79-88，规划中）
+### 浏览器演示入口
+
+Day79 是独立的前端对接项目，代码位于 [`day79/`](day79/)。它通过 Vite 代理连接 Day78 的 FastAPI，页面可以演示多轮问答、JWT 身份、知识来源、订单查询和反馈闭环：
+
+```bash
+cd day79
+npm install
+npm run dev
+```
+
+前端地址是 <http://127.0.0.1:5173>；Day78 后端启动和 token 生成方式见 [`day79/README.md`](day79/README.md)。
+
+### 可选补充：AI 自动化测试 backup（Day80-89）
+
+| Day | 学习入口 | 主题 | 核心验收 |
+|-----|----------|------|----------|
+| 80 | [`day80/README.md`](day80/README.md) | AI 测试策略与风险建模 | 测试策略 + 风险矩阵 |
+| 81 | [`day81/README.md`](day81/README.md) | 评估集与测试数据工程 | 版本化、分层测试集 |
+| 82 | [`day82/README.md`](day82/README.md) | mock、契约与不变量测试 | 离线稳定自动化套件 |
+| 83 | [`day83/README.md`](day83/README.md) | RAG 自动化测试 | 召回/生成/引用分层评测 |
+| 84 | [`day84/README.md`](day84/README.md) | LLM-as-judge 校准 | 人工一致性与偏差报告 |
+| 85 | [`day85/README.md`](day85/README.md) | Agent 自动化测试 | 真实工具轨迹与副作用测试 |
+| 86 | [`day86/README.md`](day86/README.md) | AI API、流式与 E2E | SSE/鉴权/多租户端到端测试 |
+| 87 | [`day87/README.md`](day87/README.md) | 安全、韧性与性能 | 对抗/故障注入/压测报告 |
+| 88 | [`day88/README.md`](day88/README.md) | CI 分层门禁与防 flaky | PR/nightly/release 三层门禁 |
+| 89 | [`day89/README.md`](day89/README.md) | 线上质量闭环（可选） | badcase 回流与量化改进复盘 |
+
+这条 AI 测试专项线可以按天还原运行代码，例如：
+
+```bash
+python tools/materialize_ai_testing_day.py 89
+cd .build/day89/ai-testing
+pytest -q
+```
+
+`materialize_ai_testing_day.py` 会把 Day80 到指定 Day 的专项代码合并到 `.build/day<DAY>/ai-testing/`，用于验证每一天的增量结果。
+
+这部分只在准备 AI 自动化测试岗位时选学，不阻塞 AI 应用开发主线和求职进度。详细内容见 [`AI自动化测试专项学习大纲.md`](AI自动化测试专项学习大纲.md)。现有 Day18-26、Day48、Day58、Day62 已提供大部分前置基础。
+
+### 阶段6：企业客服 Agent 进阶（Day90-105）
+
+Day90 起是独立的企业交付进阶工程，不会覆盖 Day51–79 的历史项目或本地 `customer_support/` 实验目录。它把已有的 RAG、评测、LangGraph 和 MCP 基础补成面向企业 AI 应用开发岗位的可测试能力：意图/槽位、PostgreSQL、Redis、Qdrant、Compose/Linux、vLLM，以及 MCP 鉴权与 A2A。
 
 | Day | 主题 | 核心验收 |
 |-----|------|----------|
-| 79 | AI 测试策略与风险建模 | 测试策略 + 风险矩阵 |
-| 80 | 评估集与测试数据工程 | 版本化、分层测试集 |
-| 81 | mock、契约与不变量测试 | 离线稳定自动化套件 |
-| 82 | RAG 自动化测试 | 召回/生成/引用分层评测 |
-| 83 | LLM-as-judge 校准 | 人工一致性与偏差报告 |
-| 84 | Agent 自动化测试 | 真实工具轨迹与副作用测试 |
-| 85 | AI API、流式与 E2E | SSE/鉴权/多租户端到端测试 |
-| 86 | 安全、韧性与性能 | 对抗/故障注入/压测报告 |
-| 87 | CI 分层门禁与防 flaky | PR/nightly/release 三层门禁 |
-| 88 | 线上质量闭环（可选） | badcase 回流与量化改进复盘 |
+| 90–93 | few-shot 意图、槽位追问、稳定 JSON、客服工作流 | 无法识别/缺参不执行副作用，状态可跨轮恢复 |
+| 94–96 | PostgreSQL、Text2SQL 安全、Redis | RLS/参数化、执行计划门禁、缓存租户版本与限流 |
+| 97–98 | pgvector/Qdrant/Milvus 选型、Compose/Linux | Qdrant tenant filter，Postgres+Redis+Qdrant 单机可复现 |
+| 99–101 | OpenAI-compatible、vLLM、推理基准 | 模型配置、GPU 参数、质量+TTFT+p95 发布门禁 |
+| 102–105 | MCP HTTP 鉴权、A2A 任务协议与集成 | scope/审批、Agent Card、JSON-RPC/SSE、客服委托订单 Agent |
 
-这部分只在准备 AI 自动化测试岗位时选学，不阻塞 AI 应用开发主线和求职进度。详细内容见 [`AI自动化测试专项学习大纲.md`](AI自动化测试专项学习大纲.md)。现有 Day18-26、Day48、Day58、Day62 已提供大部分前置基础。
+完整路线和边界见 [`docs/day90-105_overview.md`](docs/day90-105_overview.md)。任意一天可独立还原：
+
+```bash
+python tools/materialize_enterprise_day.py 105
+cd .build/day105/enterprise-support
+python -m pytest -q
+```
 
 ### 整合作品 `capstone/`（毕业项目主体）
 
