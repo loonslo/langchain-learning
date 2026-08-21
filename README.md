@@ -2,7 +2,7 @@
 
 > 循序渐进的每日代码：从"问一次"到"能查文档、能评测、能上线"，一天一个核心概念。
 > 每个文件开头有「这天学什么」，关键行有注释，能独立运行。
-> 核心课程 Day1–50 建立 AI 应用开发与评测底座；Day51–78 连续开发一个生产导向项目；Day79 把它接成独立的浏览器前端。Day80–89 是可选的 AI 自动化测试 backup 路线。
+> Day1–50 建立 AI 应用开发与评测底座；Day51–79 连续交付一个带浏览器前端的生产导向项目；Day80–89 把测试背景升级为 AI 质量工程能力；Day90–105 补齐企业数据、推理服务、MCP 鉴权与 A2A 多 Agent 集成。
 
 ## 环境
 
@@ -38,9 +38,11 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))  # 把路径填进各 RAG 文
 工程化阶段（Day41+）还需要：`pip install fastapi uvicorn pytest`
 企业 / 上线阶段（Day56/63/66）还需要：`pip install "python-jose[cryptography]" langchain-postgres "psycopg[binary]" locust`
 
-## 课程地图（Day1-78）
+## 课程地图（Day1–Day105）
 
-> Day1–50 使用按天归档的独立练习目录建立基础；Day51–78 使用“每日完整变更集”推进同一个项目。每天除了新增文件，还必须展示被改写的旧文件和继续参与主链但未改的文件。README 记录当天完整结构，未修改文件不重复复制，并可用 `tools/materialize_day.py` 还原任意一天。
+下表按学习阶段列出全部 Day 的入口、主题和验收目标；每个 Day 目录的 README 提供该日的运行方式与练习说明。
+
+> Day1–50 使用按天归档的独立练习目录建立基础；Day51–78 使用“每日完整变更集”推进同一个项目，Day79 为该项目的独立浏览器前端。每天除了新增文件，还必须展示被改写的旧文件和继续参与主链但未改的文件。README 记录当天完整结构，未修改文件不重复复制，并可用 `tools/materialize_day.py` 还原 Day51–78 中任意一天。
 
 ### 阶段0 固本 + 裸写 harness（Day1-11）
 
@@ -150,7 +152,7 @@ Day28–39 阶段分析文档归档在 [`day28-39/README.md`](day28-39/README.md
 python tools/day_change_report.py 52
 ```
 
-Day51–Day54 的逐文件衔接说明见 [`docs/Day51-Day54衔接变更总览.md`](docs/Day51-Day54衔接变更总览.md)；后续完整主线见 [`docs/Day55-Day78衔接总览.md`](docs/Day55-Day78衔接总览.md)。
+各日 README 记录了当天新增、修改和继承的文件；需要查看某日结束时的完整项目时，使用上面的还原命令即可。
 
 ### 浏览器演示入口
 
@@ -164,7 +166,7 @@ npm run dev
 
 前端地址是 <http://127.0.0.1:5173>；Day78 后端启动和 token 生成方式见 [`day79/README.md`](day79/README.md)。
 
-### 可选补充：AI 自动化测试 backup（Day80-89）
+### 阶段6：AI 自动化测试与质量工程（Day80–Day89）
 
 | Day | 学习入口 | 主题 | 核心验收 |
 |-----|----------|------|----------|
@@ -189,9 +191,9 @@ pytest -q
 
 `materialize_ai_testing_day.py` 会把 Day80 到指定 Day 的专项代码合并到 `.build/day<DAY>/ai-testing/`，用于验证每一天的增量结果。
 
-这部分只在准备 AI 自动化测试岗位时选学，不阻塞 AI 应用开发主线和求职进度。详细内容见 [`AI自动化测试专项学习大纲.md`](AI自动化测试专项学习大纲.md)。现有 Day18-26、Day48、Day58、Day62 已提供大部分前置基础。
+这部分把测试背景转化为 AI 应用开发的差异化质量能力；时间紧时可优先完成 Day80–85，再按目标 JD 选学 API、安全、性能和线上质量。详细内容见 [`AI自动化测试专项学习大纲.md`](AI自动化测试专项学习大纲.md)。现有 Day18–26、Day48、Day58、Day62 已提供大部分前置基础。
 
-### 阶段6：企业客服 Agent 进阶（Day90-105）
+### 阶段7–8：企业基础设施与多 Agent 协作（Day90–Day105）
 
 Day90 起是独立的企业交付进阶工程，不会覆盖 Day51–79 的历史项目或本地 `customer_support/` 实验目录。它把已有的 RAG、评测、LangGraph 和 MCP 基础补成面向企业 AI 应用开发岗位的可测试能力：意图/槽位、PostgreSQL、Redis、Qdrant、Compose/Linux、vLLM，以及 MCP 鉴权与 A2A。
 
@@ -213,28 +215,15 @@ python -m pytest -q
 
 ### 整合作品 `capstone/`（毕业项目主体）
 
-多租户企业客服与工单 Copilot，端到端。详见 `capstone/README.md`。
+多租户企业客服与工单 Copilot，端到端。详见 [`capstone/README.md`](capstone/README.md)。
 核心模块：`knowledge_base.py`（混合检索+溯源）、`connector.py`（增量同步）、
 `permissions.py`（文档级权限）、`auth.py`（JWT+多租户+限流）、`service.py`（统一编排）、
 `approval.py`（持久化审批）、
 `evaluation.py` + `ci_gate.py`（评测+门禁）、`monitoring.py`（监控）、
 `api_enterprise.py`（唯一 HTTP 服务）、`test_production.py`（生产边界回归）。
 
-### 评测平台 `evals/`（阶段2 可单独展示）
-
-```bash
-python -m evals.run_eval_platform        # 质量+成本+延迟+失败库+回归记录
-python day24/day24_prompt_ab_judge.py    # prompt A/B + judge 一致性
-python -m evals.agent_trajectory_eval     # Agent 轨迹评测
-python -m evals.dashboard                 # 生成 reports/dashboard.html 看板
-```
-
-生成物在 `reports/`：`eval_runs.csv`（回归曲线原料）、`latest_report.md`、`failures.json`、
-`prompt_ab_judge_agreement.json`、`agent_trajectory_eval.json`、`dashboard.html`。
-
 ## 辅助文件（非课程）
 
-- `tess.py` — 一次性脚本：下载 embedding 模型
 - `test_doc.txt` — RAG 用的测试文档
 
 ## 学习原则
