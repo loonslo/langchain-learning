@@ -1,0 +1,259 @@
+<meta charset="utf-8">
+<title>LangGraph 核心模型画板</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #172033;
+    --muted: #68758a;
+    --paper: #fbfaf7;
+    --card: #ffffff;
+    --line: #e7e5df;
+    --blue: #2f6fed;
+    --blue-soft: #eaf1ff;
+    --orange: #d97706;
+    --orange-soft: #fff1dc;
+    --purple: #7c3aed;
+    --purple-soft: #f1eaff;
+    --green: #16805d;
+    --green-soft: #e6f6ef;
+    --slate: #536174;
+    --slate-soft: #edf0f4;
+    --red: #b54747;
+    --red-soft: #fdecec;
+    --shadow: 0 12px 30px rgba(47, 55, 73, .08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 12% 4%, rgba(47,111,237,.07), transparent 26rem),
+      radial-gradient(circle at 88% 20%, rgba(124,58,237,.06), transparent 24rem),
+      var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  #board { max-width: 1320px; margin: 0 auto; padding: 36px 26px 56px; }
+  .eyebrow { color: var(--blue); font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+  h1 { margin: 6px 0 6px; font-size: clamp(26px, 4vw, 42px); line-height: 1.1; letter-spacing: -.03em; }
+  .lead { color: var(--muted); max-width: 760px; font-size: 15px; }
+
+  .quote {
+    margin: 22px 0 30px;
+    padding: 18px 22px;
+    background: linear-gradient(120deg, var(--blue-soft), var(--purple-soft));
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--blue);
+    border-radius: 14px;
+    font-size: 15.5px;
+    box-shadow: var(--shadow);
+  }
+  .quote b { color: var(--blue); }
+  .quote .hl { background: rgba(124,58,237,.12); padding: 1px 6px; border-radius: 6px; color: var(--purple); font-weight: 600; }
+
+  .grid { display: grid; gap: 18px; }
+  .triple { grid-template-columns: repeat(3, 1fr); }
+  @media (max-width: 880px){ .triple { grid-template-columns: 1fr; } }
+  .dual { grid-template-columns: 1.1fr 1fr; }
+  @media (max-width: 880px){ .dual { grid-template-columns: 1fr; } }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px 20px;
+    box-shadow: var(--shadow);
+  }
+  .card h2 { margin: 0 0 4px; font-size: 18px; letter-spacing: -.02em; display: flex; align-items: center; gap: 10px; }
+  .card .tag { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 999px; }
+  .t-blue { background: var(--blue-soft); color: var(--blue); }
+  .t-orange { background: var(--orange-soft); color: var(--orange); }
+  .t-purple { background: var(--purple-soft); color: var(--purple); }
+  .t-green { background: var(--green-soft); color: var(--green); }
+  .t-slate { background: var(--slate-soft); color: var(--slate); }
+  .t-red { background: var(--red-soft); color: var(--red); }
+  .card p.muted { color: var(--muted); font-size: 13.5px; margin: 6px 0 0; }
+
+  .pill {
+    display: inline-flex; align-items: center; gap: 7px;
+    padding: 7px 12px; margin: 5px 5px 0 0;
+    border-radius: 10px; font-size: 13px; font-weight: 600;
+    border: 1px solid var(--line);
+  }
+  .pill .dot { width: 9px; height: 9px; border-radius: 50%; }
+  .d-blue { background: var(--blue); } .d-orange { background: var(--orange); }
+  .d-purple { background: var(--purple); } .d-green { background: var(--green); }
+
+  /* diagram */
+  .diagram {
+    background: var(--card);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 26px 22px 30px;
+    box-shadow: var(--shadow);
+    overflow-x: auto;
+  }
+  svg { width: 100%; height: auto; display: block; }
+  .edge-line { stroke: var(--slate); stroke-width: 2; fill: none; }
+  .edge-label { font-size: 12px; fill: var(--muted); font-weight: 600; }
+  .node-box { rx: 14; }
+  .node-title { font-size: 15px; font-weight: 700; }
+  .node-sub { font-size: 11.5px; fill: var(--muted); }
+  .loop-text { font-size: 13px; fill: var(--orange); font-weight: 700; }
+
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-top: 4px; }
+  @media (max-width: 720px){ .compare { grid-template-columns: 1fr; } }
+  .vs { text-align:center; font-weight:800; color: var(--muted); }
+  ul.clean { margin: 8px 0 0; padding-left: 18px; font-size: 13.5px; }
+  ul.clean li { margin: 4px 0; }
+
+  .section-title { margin: 38px 0 14px; font-size: 13px; letter-spacing: .14em; text-transform: uppercase; color: var(--slate); font-weight: 700; }
+
+  .footer { margin-top: 34px; color: var(--muted); font-size: 12.5px; text-align: center; }
+  .footer code { background: var(--slate-soft); padding: 2px 6px; border-radius: 6px; }
+</style>
+
+<div id="board">
+  <div class="eyebrow">LangGraph 心智模型</div>
+  <h1>把流程建模成「状态图」</h1>
+  <p class="lead">一句话洞察：LangGraph 用状态图描述 Agent 流程——线性场景等价于 LCEL，真正价值在分支、循环与持久化状态。</p>
+
+  <div class="quote">
+    LangGraph 把流程建模成<span class="hl">状态图</span>：<b>State</b> 是贯穿全程的数据，<b>Node</b> 读写 State，<b>Edge</b> 定顺序。
+    线性场景它等价于 <b>LCEL</b>，真正价值在能表达<span class="hl">分支、循环和持久化状态</span>。
+  </div>
+
+  <!-- ============ 三要素 ============ -->
+  <div class="section-title">一 · 三个核心要素</div>
+  <div class="grid triple">
+    <div class="card">
+      <h2><span class="tag t-blue">State</span>贯穿全程的数据</h2>
+      <p class="muted">一张图共享的「黑板」。所有节点都能读、都能改，是整个流程的单一数据源。</p>
+      <div style="margin-top:10px">
+        <span class="pill"><span class="dot d-blue"></span>TypedDict / MessagesState</span>
+        <span class="pill"><span class="dot d-blue"></span>单点真相</span>
+        <span class="pill"><span class="dot d-blue"></span>随步骤累积</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2><span class="tag t-orange">Node</span>读写 State</h2>
+      <p class="muted">真正的计算单元：LLM 调用、工具执行、检索、判断……输入是 State，产出是 State 的增量更新。</p>
+      <div style="margin-top:10px">
+        <span class="pill"><span class="dot d-orange"></span>agent / tools</span>
+        <span class="pill"><span class="dot d-orange"></span>planner / reviewer</span>
+        <span class="pill"><span class="dot d-orange"></span>纯函数返回 dict</span>
+      </div>
+    </div>
+    <div class="card">
+      <h2><span class="tag t-purple">Edge</span>定顺序</h2>
+      <p class="muted">节点间的连线，决定「谁先谁后」。普通边定线性顺序，条件边做分支路由。</p>
+      <div style="margin-top:10px">
+        <span class="pill"><span class="dot d-purple"></span>add_edge 顺序</span>
+        <span class="pill"><span class="dot d-purple"></span>条件边分支</span>
+        <span class="pill"><span class="dot d-purple"></span>循环回连</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 状态图示意 ============ -->
+  <div class="section-title">二 · 状态图长什么样</div>
+  <div class="diagram">
+    <svg viewBox="0 0 980 320" role="img" aria-label="LangGraph 状态图示意">
+      <defs>
+        <marker id="arrow" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto" markerUnits="strokeWidth">
+          <path d="M0,0 L7,3 L0,6 Z" fill="#536174"></path>
+        </marker>
+      </defs>
+
+      <!-- State 贯穿背景 -->
+      <rect x="20" y="40" width="940" height="240" rx="18" fill="#f6f8fc" stroke="#dbe3f0" stroke-dasharray="6 6"></rect>
+      <text x="34" y="66" font-size="13" font-weight="700" fill="#2f6fed">State（贯穿全程的共享数据）</text>
+      <text x="700" y="66" font-size="11" fill="#68758a">State 只增不改 · Node 读写它</text>
+
+      <!-- Nodes -->
+      <rect class="node-box" x="60" y="110" width="150" height="70" rx="14" fill="#fff1dc" stroke="#d97706"></rect>
+      <text class="node-title" x="135" y="142" text-anchor="middle" fill="#d97706">START</text>
+      <text class="node-sub" x="135" y="162" text-anchor="middle">入口</text>
+
+      <rect class="node-box" x="280" y="110" width="160" height="70" rx="14" fill="#ffffff" stroke="#2f6fed"></rect>
+      <text class="node-title" x="360" y="142" text-anchor="middle" fill="#2f6fed">Node A</text>
+      <text class="node-sub" x="360" y="162" text-anchor="middle">读取 State → 计算</text>
+
+      <rect class="node-box" x="520" y="110" width="160" height="70" rx="14" fill="#ffffff" stroke="#2f6fed"></rect>
+      <text class="node-title" x="600" y="142" text-anchor="middle" fill="#2f6fed">Node B</text>
+      <text class="node-sub" x="600" y="162" text-anchor="middle">写回 State 增量</text>
+
+      <rect class="node-box" x="760" y="110" width="150" height="70" rx="14" fill="#e6f6ef" stroke="#16805d"></rect>
+      <text class="node-title" x="835" y="142" text-anchor="middle" fill="#16805d">END</text>
+      <text class="node-sub" x="835" y="162" text-anchor="middle">出口</text>
+
+      <!-- Edges -->
+      <line class="edge-line" x1="210" y1="145" x2="278" y2="145" marker-end="url(#arrow)"></line>
+      <line class="edge-line" x1="440" y1="145" x2="518" y2="145" marker-end="url(#arrow)"></line>
+      <line class="edge-line" x1="680" y1="145" x2="758" y2="145" marker-end="url(#arrow)"></line>
+
+      <!-- 条件分支（B 向下分叉） -->
+      <path class="edge-line" d="M600,180 C600,235 430,235 430,200" marker-end="url(#arrow)"></path>
+      <text class="edge-label" x="470" y="258">条件边：tools_condition</text>
+
+      <!-- 循环：B -> A 回连 -->
+      <path class="edge-line" d="M520,145 C460,80 360,80 300,110" marker-end="url(#arrow)" stroke="#d97706"></path>
+      <text class="loop-text" x="350" y="92">↑ 循环：失败重试 / 多步执行</text>
+
+      <!-- 持久化标注 -->
+      <rect x="60" y="232" width="850" height="34" rx="10" fill="#f1eaff" stroke="#7c3aed"></rect>
+      <text x="485" y="254" text-anchor="middle" font-size="12.5" fill="#7c3aed" font-weight="700">checkpointer 在每一步快照 State（按 thread_id）→ 多轮记忆 / 中断恢复 / 持久化</text>
+    </svg>
+  </div>
+
+  <!-- ============ LCEL 等价 vs 真正价值 ============ -->
+  <div class="section-title">三 · 线性等价于 LCEL，价值在非线性</div>
+  <div class="card">
+    <div class="compare">
+      <div>
+        <h2 style="font-size:16px"><span class="tag t-slate">线性场景</span> ≈ LCEL</h2>
+        <p class="muted">纯顺序管道：A → B → C，没有分支和回首。</p>
+        <ul class="clean">
+          <li><code>prompt | llm | parser</code> 用 LCEL 更简洁</li>
+          <li>LangGraph 在此场景是「重一点的 LCEL」</li>
+          <li>无需图的表达力，就用更轻的方案</li>
+        </ul>
+      </div>
+      <div>
+        <h2 style="font-size:16px"><span class="tag t-green">真正价值</span> 非线性能力</h2>
+        <p class="muted">当流程需要「看情况走」和「反复走」时，图才显威力。</p>
+        <ul class="clean">
+          <li><b>分支</b>：条件边按 State 选下一步（Day32 路由）</li>
+          <li><b>循环</b>：节点回连自己/上游（ReAct、重试、Plan-Execute）</li>
+          <li><b>持久化状态</b>：checkpointer 跨调用保存（Day35）</li>
+          <li>三者叠加 = 可控、可观测、可中断恢复的 Agent</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 能力映射 ============ -->
+  <div class="section-title">四 · 能力 → 课程映射</div>
+  <div class="grid dual">
+    <div class="card">
+      <h2><span class="tag t-orange">分支</span>条件边路由</h2>
+      <p class="muted">结构化输出决定走哪条（Day32），supervisor 多 Agent（Day39），意图分流（RAG/SQL/闲聊）。</p>
+    </div>
+    <div class="card">
+      <h2><span class="tag t-red">循环</span>节点回连</h2>
+      <p class="muted">ReAct 想→做→看（Day30）、RetryPolicy 重试（Day31）、Plan-and-Execute 按 cursor 执行（Day33）。</p>
+    </div>
+    <div class="card">
+      <h2><span class="tag t-purple">持久化状态</span>checkpointer</h2>
+      <p class="muted">多轮记忆、中断恢复（Day35 / Day36 HITL）、多用户 thread_id 隔离、上下文摘要（Day35）。</p>
+    </div>
+    <div class="card">
+      <h2><span class="tag t-blue">可观测</span>串起三者</h2>
+      <p class="muted">stream_mode 看每步（Day34）、轨迹落盘定位分支/循环出错点——生产护城河。</p>
+    </div>
+  </div>
+
+  <div class="footer">
+    画板对应洞察：<code>State 贯穿 · Node 读写 · Edge 定序</code> → 线性 = LCEL；分支 / 循环 / 持久化才是 LangGraph 的护城河。
+  </div>
+</div>

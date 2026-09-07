@@ -2,6 +2,20 @@
 
 这一组的主线是：先给 Agent 加错误处理和可靠路由，再加入规划、观测、持久化、人工审批，最后把搜索、Text2SQL、多 Agent 和 MCP 串起来。
 
+## 统一项目 · 一次生产回答是怎样生成的
+
+代码和逐节点讲解在：[day31_40/README.md](../day31_40/README.md) 与 [day31_40/production_graph.py](../day31_40/production_graph.py)。
+
+前面的单日文件用于分别理解概念，统一项目则把十天能力放进同一条真实业务链：
+
+```text
+输入/安全/上下文治理 → 结构化路由 → 规划 → Supervisor 调度
+        → 搜索/SQL/MCP 专家并行取证 → 证据汇聚 → 草稿生成
+        → 质量门禁 → 补证据或有限修订 → 人工审批 → 幂等发布
+```
+
+阅读时重点跟踪 `GraphState` 的变化：`work_items` 是计划，`completed_items` 是 Supervisor 的执行进度，`evidence` 是各专家并行返回的原料，`context` 是编号后的统一证据，`draft` 才是模型生成的草稿，`quality` 决定补证据、修订、转人工还是发布。这样可以清楚看到“生成”并非一次模型调用，而是一条可验证、可恢复的流水线。逐项覆盖证据见 [COVERAGE.md](../day31_40/COVERAGE.md)。
+
 ## Day31 · 节点容错、重试和超时
 
 代码在：[day31/day31_node_reliability.py](../day31/day31_node_reliability.py)

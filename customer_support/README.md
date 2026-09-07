@@ -19,6 +19,70 @@ uv run python -m src.app
 以上命令在 PowerShell、cmd、zsh 和 bash 中相同，不需要添加 PowerShell 的 `&`
 运算符，也不需要手写 `.venv` 中的解释器路径。
 
+## 网页界面（HTTP 服务 + 静态前端）
+
+后端已封装为 FastAPI 服务（`src/server.py`，复用 `src/api.py` 的契约）。
+
+### 一键启动（推荐）
+
+同时拉起后端 API 与前端静态站点，并自动打开浏览器：
+
+```shell
+# 方式一：命令行
+uv run python run.py
+# 仅启动不自动开浏览器：
+uv run python run.py --no-browser
+
+# 方式二：Windows 双击 run.bat（已内置 HF_HUB_OFFLINE=1 与 TMPDIR）
+run.bat
+```
+
+默认地址（均绑定 127.0.0.1，仅本机访问）：
+
+- 网页界面：`http://127.0.0.1:19888/`
+- API 文档：`http://127.0.0.1:19100/docs`
+
+端口可用参数覆盖：`uv run python run.py --backend-port 19100 --frontend-port 19888`。
+
+### 仅启动后端
+
+```shell
+# 默认监听 127.0.0.1:19100（8000/8080 在 Windows 上常被 Hyper-V 保留，会导致 bind 失败）
+uv run support-assistant --serve
+# 或显式指定端口：
+uv run support-assistant --serve --port 19100
+```
+
+- 接口：`GET /health`、`POST /chat`（字段见 `src/api.py` 的 `ChatRequest`/`ChatResponse`）。
+- 多轮对话通过 `session_id` + SQLite 会话库持久化，跨请求保留上下文。
+
+打开前端页面（纯静态，无需 npm 构建）：
+
+```shell
+# 用浏览器直接打开，或将 frontend/ 作为静态目录托管
+# 页面默认连接 http://127.0.0.1:19100，与上面的服务端口一致
+start frontend/index.html
+```
+
+### 模型 provider 切换
+
+`.env` 通过 `LLM_PROVIDER` 选择对话模型：
+
+- `LLM_PROVIDER=deepseek`：云端 DeepSeek，需要 `LLM_API_KEY`。
+- `LLM_PROVIDER=ollama`：本地 Ollama，**无需 API key**。示例：
+
+  ```dotenv
+  LLM_PROVIDER=ollama
+  LLM_MODEL=gemma4:12b        # 改为你本地已有的模型名，如 qwen3.5:9b
+  LLM_BASE_URL=http://localhost:11434
+  ```
+
+  Ollama 走原生 HTTP 适配器（`src/ollama_model.py`），绕开 OpenAI 兼容层的
+  `tools: []` 问题，避免 qwen3 等模型返回 502。
+
+> 注意：首次启动会在本地加载 embedding 模型（已缓存到 `~/.cache/huggingface`）。
+> 若处于离线/代理环境导致模型拉取失败，可设置 `HF_HUB_OFFLINE=1` 强制使用本地缓存。
+
 ## VS Code / PyCharm 直接运行
 
 VS Code 已提供跨平台配置。Code Runner 的 `Run Code` 会通过 `uv` 使用项目环境；若在

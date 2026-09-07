@@ -1,0 +1,443 @@
+<meta charset="utf-8">
+<title>RAG 105 天模块化学习画板</title>
+<style>
+  :root {
+    color-scheme: light;
+    --ink: #172033;
+    --muted: #68758a;
+    --paper: #fbfaf7;
+    --card: #ffffff;
+    --line: #e7e5df;
+    --blue: #2f6fed;
+    --blue-soft: #eaf1ff;
+    --orange: #d97706;
+    --orange-soft: #fff1dc;
+    --purple: #7c3aed;
+    --purple-soft: #f1eaff;
+    --green: #16805d;
+    --green-soft: #e6f6ef;
+    --slate: #536174;
+    --slate-soft: #edf0f4;
+    --red: #b54747;
+    --shadow: 0 12px 30px rgba(47, 55, 73, .08);
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background:
+      radial-gradient(circle at 15% 5%, rgba(47,111,237,.07), transparent 25rem),
+      radial-gradient(circle at 90% 25%, rgba(124,58,237,.06), transparent 24rem),
+      var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI", "Microsoft YaHei", system-ui, sans-serif;
+    line-height: 1.55;
+  }
+  #rag-board { max-width: 1420px; margin: 0 auto; padding: 34px 28px 52px; }
+  .eyebrow { color: var(--blue); font-size: 12px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; }
+  h1 { margin: 6px 0 8px; font-size: clamp(28px, 4vw, 48px); line-height: 1.08; letter-spacing: -.04em; }
+  h2 { margin: 0; font-size: 20px; letter-spacing: -.02em; }
+  h3 { margin: 0; font-size: 15px; }
+  p { margin: 0; }
+  .lede { max-width: 860px; color: var(--muted); font-size: 15px; }
+  .board-head { display: flex; justify-content: space-between; gap: 22px; align-items: flex-end; margin-bottom: 28px; }
+  .head-note { max-width: 320px; color: var(--muted); font-size: 13px; text-align: right; }
+  .surface { background: rgba(255,255,255,.86); border: 1px solid var(--line); border-radius: 22px; box-shadow: var(--shadow); }
+  .section { margin-top: 22px; padding: 22px; }
+  .section-head { display: flex; align-items: baseline; justify-content: space-between; gap: 14px; margin-bottom: 16px; }
+  .section-head p { color: var(--muted); font-size: 13px; }
+  .pipeline { display: grid; grid-template-columns: 140px 1fr 28px 1fr 28px 1fr 140px; align-items: stretch; gap: 10px; }
+  .pipe-end { display: grid; place-items: center; min-height: 166px; padding: 14px; border: 1px dashed #c8c4ba; border-radius: 18px; color: var(--muted); text-align: center; font-size: 14px; background: rgba(251,250,247,.75); }
+  .pipe-end strong { display: block; color: var(--ink); font-size: 17px; }
+  .pipe-arrow { display: grid; place-items: center; color: #a7a196; font-size: 25px; }
+  .pipe-stage { min-height: 166px; padding: 16px; border-radius: 18px; border: 1px solid transparent; }
+  .pipe-stage.retrieval { background: var(--blue-soft); border-color: #cbdcff; }
+  .pipe-stage.augmentation { background: var(--orange-soft); border-color: #f6d7a6; }
+  .pipe-stage.generation { background: var(--purple-soft); border-color: #d8c5ff; }
+  .pipe-kicker { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 11px; }
+  .pipe-kicker span { color: var(--muted); font-size: 12px; }
+  .pipe-list { display: grid; gap: 7px; margin: 0; padding: 0; list-style: none; font-size: 13px; }
+  .pipe-list li { padding-left: 14px; position: relative; }
+  .pipe-list li::before { content: ""; position: absolute; left: 0; top: .63em; width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .ring { margin-top: 14px; padding: 12px 15px; border-radius: 14px; background: var(--green-soft); color: #21624d; font-size: 13px; }
+  .ring strong { color: var(--green); }
+  .legend { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .legend-item, .tag { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 4px 9px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .legend-item::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+  .retrieval-tag { color: var(--blue); background: var(--blue-soft); }
+  .augmentation-tag { color: var(--orange); background: var(--orange-soft); }
+  .generation-tag { color: var(--purple); background: var(--purple-soft); }
+  .quality-tag { color: var(--green); background: var(--green-soft); }
+  .engineering-tag { color: var(--slate); background: var(--slate-soft); }
+  .full-tag { color: var(--red); background: #fdebea; }
+  .module-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 11px; }
+  .module-card { min-height: 130px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: var(--card); }
+  .module-card.featured { grid-column: span 2; }
+  .module-top { display: flex; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+  .module-days { color: var(--muted); font-size: 12px; }
+  .module-card p { color: var(--muted); font-size: 12px; }
+  .module-card .tag { margin-top: 10px; }
+  .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 15px; }
+  .filters { display: flex; flex-wrap: wrap; gap: 7px; }
+  button { font: inherit; }
+  .filter { border: 1px solid var(--line); border-radius: 999px; padding: 7px 11px; background: var(--card); color: var(--muted); cursor: pointer; }
+  .filter:hover, .filter:focus-visible { border-color: var(--blue); color: var(--blue); outline: 3px solid rgba(47,111,237,.14); outline-offset: 1px; }
+  .filter[aria-pressed="true"] { color: #fff; border-color: var(--ink); background: var(--ink); }
+  .count { color: var(--muted); font-size: 13px; }
+  .learning-layout { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(280px, .6fr); gap: 16px; align-items: start; }
+  .day-grid { display: grid; grid-template-columns: repeat(15, minmax(0, 1fr)); gap: 6px; }
+  .day-button { min-height: 50px; display: grid; place-items: center; gap: 2px; padding: 6px 3px; border: 1px solid var(--line); border-radius: 11px; background: var(--card); color: var(--ink); cursor: pointer; transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease; }
+  .day-button:hover, .day-button:focus-visible { transform: translateY(-2px); border-color: currentColor; box-shadow: 0 5px 13px rgba(23,32,51,.09); outline: none; }
+  .day-button[aria-pressed="true"] { border-width: 2px; border-color: var(--ink); box-shadow: 0 5px 16px rgba(23,32,51,.15); }
+  .day-button .num { font-size: 13px; font-weight: 800; }
+  .day-button .mini { font-size: 9px; color: var(--muted); line-height: 1.1; text-align: center; }
+  .day-button.retrieval { color: var(--blue); background: linear-gradient(180deg, #fff, var(--blue-soft)); }
+  .day-button.augmentation { color: var(--orange); background: linear-gradient(180deg, #fff, var(--orange-soft)); }
+  .day-button.generation { color: var(--purple); background: linear-gradient(180deg, #fff, var(--purple-soft)); }
+  .day-button.quality { color: var(--green); background: linear-gradient(180deg, #fff, var(--green-soft)); }
+  .day-button.engineering { color: var(--slate); background: linear-gradient(180deg, #fff, var(--slate-soft)); }
+  .day-button.full { color: var(--red); background: linear-gradient(180deg, #fff, #fdebea); }
+  .day-button.is-hidden { display: none; }
+  .detail { position: sticky; top: 14px; min-height: 270px; padding: 20px; background: #172033; color: #f6f7fb; border-radius: 18px; box-shadow: 0 14px 34px rgba(23,32,51,.2); }
+  .detail .tag { margin-bottom: 12px; }
+  .detail h3 { font-size: 20px; line-height: 1.25; }
+  .detail p { margin-top: 10px; color: #c6ccda; font-size: 13px; }
+  .detail .detail-effect { margin-top: 15px; padding-top: 13px; border-top: 1px solid rgba(255,255,255,.16); color: #f6f7fb; font-size: 13px; }
+  .detail .detail-ref { display: inline-block; margin-top: 17px; color: #a9c4ff; font-size: 12px; }
+  .phase-lanes { display: grid; gap: 8px; }
+  .phase-lane { display: grid; grid-template-columns: 95px 1fr; gap: 10px; align-items: center; }
+  .phase-label { color: var(--muted); font-size: 12px; }
+  .phase-track { height: 17px; display: flex; overflow: hidden; border-radius: 999px; background: #f0eee9; }
+  .phase-segment { min-width: 3px; position: relative; opacity: .9; }
+  .phase-segment:hover { opacity: 1; }
+  .phase-segment span { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); color: rgba(255,255,255,.92); font-size: 9px; font-weight: 700; white-space: nowrap; pointer-events: none; }
+  .phase-segment.retrieval { background: var(--blue); }
+  .phase-segment.augmentation { background: var(--orange); }
+  .phase-segment.generation { background: var(--purple); }
+  .phase-segment.quality { background: var(--green); }
+  .phase-segment.engineering { background: var(--slate); }
+  .phase-segment.full { background: var(--red); }
+  .footer-note { margin-top: 18px; color: var(--muted); font-size: 12px; }
+  @media (max-width: 1040px) {
+    #rag-board { padding-inline: 18px; }
+    .pipeline { grid-template-columns: 1fr; }
+    .pipe-arrow { min-height: 22px; transform: rotate(90deg); }
+    .pipe-end { min-height: 78px; }
+    .module-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .learning-layout { grid-template-columns: 1fr; }
+    .detail { position: static; }
+  }
+  @media (max-width: 680px) {
+    #rag-board { padding: 24px 12px 40px; }
+    .board-head { display: block; }
+    .head-note { margin-top: 12px; text-align: left; }
+    .section { padding: 15px; border-radius: 17px; }
+    .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .module-card.featured { grid-column: span 2; }
+    .day-grid { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+    .day-button { min-height: 46px; }
+    .phase-lane { grid-template-columns: 72px 1fr; }
+    .phase-segment span { display: none; }
+  }
+</style>
+
+<main id="rag-board" aria-labelledby="board-title">
+  <header class="board-head">
+    <div>
+      <div class="eyebrow">Day 01 → Day 105 · RAG learning map</div>
+      <h1 id="board-title">RAG 105 天模块化学习画板</h1>
+      <p class="lede">用一条主线读完整个项目：检索决定拿什么证据，增强决定把什么交给模型，生成决定如何表达答案；质量与工程决定这三步能否可信、可控、可持续。</p>
+    </div>
+    <p class="head-note">点击任意 Day 查看它对 RAG 三步的具体修改。颜色是主落点，不代表当天只涉及一个模块。</p>
+  </header>
+
+  <section class="surface section" aria-labelledby="pipeline-title">
+    <div class="section-head">
+      <div><h2 id="pipeline-title">先看一条真实请求如何穿过系统</h2></div>
+      <div class="legend" aria-label="阶段图例">
+        <span class="legend-item retrieval-tag">检索</span>
+        <span class="legend-item augmentation-tag">增强</span>
+        <span class="legend-item generation-tag">生成</span>
+      </div>
+    </div>
+    <div class="pipeline">
+      <div class="pipe-end"><div><strong>用户问题</strong><br>自然语言输入</div></div>
+      <div class="pipe-stage retrieval">
+        <div class="pipe-kicker"><h3>1 · 检索 Retrieval</h3><span>找到证据</span></div>
+        <ul class="pipe-list"><li>加载 / 切块 / metadata</li><li>Embedding / 向量库</li><li>BM25 + RRF + rerank</li><li>租户过滤 / 增量同步</li></ul>
+      </div>
+      <div class="pipe-arrow" aria-hidden="true">→</div>
+      <div class="pipe-stage augmentation">
+        <div class="pipe-kicker"><h3>2 · 增强 Augmentation</h3><span>组织上下文</span></div>
+        <ul class="pipe-list"><li>证据门 / 引用 / 预算</li><li>历史 / 查询改写</li><li>工具 / Agent / 业务路由</li><li>身份 / 审批 / 状态恢复</li></ul>
+      </div>
+      <div class="pipe-arrow" aria-hidden="true">→</div>
+      <div class="pipe-stage generation">
+        <div class="pipe-kicker"><h3>3 · 生成 Generation</h3><span>回答问题</span></div>
+        <ul class="pipe-list"><li>Prompt + Provider</li><li>模型推理与 fallback</li><li>JSON / 引用 / 流式</li><li>答案或明确拒答</li></ul>
+      </div>
+      <div class="pipe-end"><div><strong>可验证输出</strong><br>答案 · 来源 · trace</div></div>
+    </div>
+    <div class="ring"><strong>质量 / 工程外环：</strong>评测、Trace、安全、缓存、恢复、容量、反馈和 CI 会持续回看三步，并把问题回流到检索、增强或生成的对应模块。</div>
+  </section>
+
+  <section class="surface section" aria-labelledby="modules-title">
+    <div class="section-head">
+      <div><h2 id="modules-title">12 个模块，把 105 天折叠成可复习的结构</h2></div>
+      <p>先看模块，再下钻到每天</p>
+    </div>
+    <div id="module-grid" class="module-grid"></div>
+  </section>
+
+  <section class="surface section" aria-labelledby="timeline-title">
+    <div class="section-head">
+      <div><h2 id="timeline-title">逐日变化：每天到底改了哪一层</h2></div>
+      <p>主落点筛选 · 点击 Day 查看说明</p>
+    </div>
+    <div class="toolbar">
+      <div id="filters" class="filters" aria-label="按 RAG 主落点筛选"></div>
+      <div id="count" class="count" aria-live="polite"></div>
+    </div>
+    <div class="learning-layout">
+      <div id="day-grid" class="day-grid" aria-label="Day 1 到 Day 105"></div>
+      <aside id="detail" class="detail" aria-live="polite"></aside>
+    </div>
+    <p class="footer-note">具体代码和每日练习仍以仓库中的 `dayNN/`、阶段总览以及 `docs/rag-modular-learning-map.md` 为准；白板承担的是学习导航和流程解释。</p>
+  </section>
+
+  <section class="surface section" aria-labelledby="lanes-title">
+    <div class="section-head">
+      <div><h2 id="lanes-title">三步主线的时间演进</h2></div>
+      <p>颜色表示每个阶段最主要的改造位置</p>
+    </div>
+    <div id="phase-lanes" class="phase-lanes"></div>
+  </section>
+</main>
+
+<script>
+const rawDays = `
+1|generation|第一次模型调用|建立 ChatModel、PromptTemplate 和 LCEL prompt→model→parser 生成链|后续所有检索证据最终都要进入这条生成链|M0 生成基座
+2|generation|控制模型输出|加入 temperature 和 stream，控制稳定性与交互体验|生成阶段有了可调参数和流式出口|M0 生成基座
+3|generation|结构化输出|用 Pydantic Schema 和字段校验约束模型结果|生成结果变成下游程序可以安全消费的对象|M0 生成基座
+4|augmentation|多轮记忆|加入消息历史、会话和上下文窗口|增强阶段可以把历史一起交给生成模型|M0 生成基座
+5|augmentation|工具调用|加入 Tool Schema、参数绑定、tool call 和结果回灌|增强阶段可以受控地获得外部数据和动作结果|M0 生成基座
+6|full|聊天应用整合|把 Prompt、记忆、工具和多角色消息合成 CLI 应用|生成、上下文和工具形成第一条可运行应用链|M0 生成基座
+7|retrieval|加载与切块|加入 Document Loader、Text Splitter、chunk_size 和 overlap|原始资料第一次变成可检索 chunks|M1 检索链
+8|retrieval|Embedding 与向量检索|加入 Embedding、向量库和相似度检索|词面匹配升级为语义召回|M1 检索链
+9|full|最小完整 RAG|串起检索、上下文、Prompt、生成，并加入 MMR、拒答和来源|形成第一条完整 RAG 运行链|M1 检索链
+10|augmentation|裸 SDK 手写 RAG 与 Agent Loop|展开检索、消息循环和工具循环|看懂框架封装的增强控制边界|M1 检索链
+11|generation|LLM 原理|学习 Token、Embedding、Attention、生成概率和幻觉边界|理解模型为何受上下文、长度和概率影响|M1 检索链
+12|retrieval|PDF 与来源溯源|加入 PDF Loader、metadata、页码和文件证据|召回片段可以回指真实原文|M1 检索链
+13|retrieval|切块策略|比较固定、递归、语义边界和 overlap|把 chunk 变成可实验变量，直接影响召回|M1 检索链
+14|retrieval|混合检索|加入 BM25、向量检索和 RRF|精确业务词与语义证据互补|M1 检索链
+15|retrieval|查询改写|加入 Multi-Query、HyDE 和 Context Engineering|在召回前改善模糊、口语化问题|M1 检索链
+16|retrieval|向量库持久化|加入 Chroma 保存、重载和复用|索引从临时对象升级为可复用知识库|M1 检索链
+17|retrieval|多模态与重排|加入图像理解、候选召回和二阶段 reranker|形成先广召回、再精排序的检索链|M1 检索链
+18|quality|RAG 基础评测|手写答案命中、忠实度和引用等指标|把回答好不好拆成可计算问题|M2 质量闭环
+19|quality|LLM-as-Judge|让另一个 LLM 评正确性和忠实度|引入自动裁判，同时暴露裁判不稳定|M2 质量闭环
+20|quality|评测集工程|建立 Eval Schema、事实题、跨段题、期望答案和来源|评测输入变成结构化资产|M2 质量闭环
+21|quality|拒答与引用评测|补齐拒答、来源、RAGAS 和 DeepEval|资料内回答与资料外拒答都可测|M2 质量闭环
+22|quality|LangSmith 观测|加入 Trace、运行记录和在线评估|可以从答案追到检索、增强和生成的输入输出|M2 质量闭环
+23|quality|回归实验|引入数据集版本、baseline/candidate 和回归曲线|用版本对比判断改动是否真的变好|M2 质量闭环
+24|quality|Prompt A/B|比较两版 Prompt 和 Judge agreement|生成 Prompt 选择从感觉变成对照实验|M2 质量闭环
+25|augmentation|Agent 轨迹评测|检查工具名、顺序、参数、步数和最终答案|增强过程本身成为可审计输出|M2 质量闭环
+26|quality|失败诊断与质量门|按维度生成报告，加入阈值、趋势和退出码|质量问题能定位，也能阻止发布|M2 质量闭环
+27|augmentation|LangGraph 线性图|加入 State、Node、Edge、START 和 END|显式表达检索、判断和生成的状态流|M3 增强与控制流
+28|augmentation|分支与循环|加入 conditional edge、循环和 recursion_limit|支持检索不足时改写或受控重试|M3 增强与控制流
+29|augmentation|State Reducer|规定并发状态的合并、覆盖和累加|多分支写上下文时不再互相丢数据|M3 增强与控制流
+30|augmentation|ReAct Agent|加入思考、工具、观察和继续的工具循环|检索、工具和生成组成可循环增强路径|M3 增强与控制流
+31|augmentation|节点可靠性|加入超时、有限重试、错误分类和失败出口|依赖抖动不会无限放大到整条问答链|M3 增强与控制流
+32|augmentation|结构化路由|用 Schema 约束模型选择分支|可靠决定知识检索、工具查询还是人工路径|M3 增强与控制流
+33|augmentation|Plan-and-Execute|加入计划生成、逐步执行和状态更新|复杂增强任务可检查、可恢复|M3 增强与控制流
+34|quality|Agent 可观测性|加入节点日志、trace、耗时和错误定位|能看到增强工作流内部瓶颈|M3 增强与控制流
+35|augmentation|Checkpoint 与上下文|加入状态保存、thread 恢复和上下文控制|长流程和多轮问答可以续跑|M3 增强与控制流
+36|augmentation|Streaming 与 HITL|加入中间步骤流式、interrupt 和人工恢复|生成前的高风险增强决策可被人拦截|M3 增强与控制流
+37|augmentation|搜索 Agent 与工具安全|加入白名单、参数校验和调用预算|限制增强阶段能调用什么、传什么、调用几次|M3 增强与控制流
+38|augmentation|Text2SQL Agent|加入结构化查询、只读和 SQL 安全边界|实时业务数据走受控工具，不硬塞进 RAG 文档|M3 增强与控制流
+39|augmentation|Supervisor 多 Agent|加入主管路由、专职 Agent、fan-out 和汇总|多个增强 Agent 的结果可回到统一上下文|M3 增强与控制流
+40|augmentation|MCP 工具协议|加入 MCP Server/Client、stdio 和 HTTP 边界|工具增强从本地函数升级为标准协议接入|M3 增强与控制流
+41|engineering|FastAPI 服务化|加入 HTTP 契约、依赖注入、错误码和替身测试|RAG 从脚本变成稳定 API|M4 服务化与模型方案
+42|engineering|可靠调用|加入异步、超时、重试、fallback 和成本统计|给检索和生成依赖增加预算|M4 服务化与模型方案
+43|generation|缓存与模型路由|按复杂度路由模型，平衡质量、延迟和费用|相同请求复用结果，复杂任务使用更强生成模型|M4 服务化与模型方案
+44|engineering|SQLite 数据层|加入参数化 SQL、事务、WAL 和迁移意识|会话、工单等状态不再混进 Prompt|M4 服务化与模型方案
+45|engineering|Trace 与 Docker|加入运行轨迹和容器镜像|三步有运行证据，也有可复现运行单元|M4 服务化与模型方案
+46|generation|Ollama 与统一日志|加入本地推理、统一调用接口和结构化日志|生成模型可在云端与本地切换|M4 服务化与模型方案
+47|augmentation|安全 Guardrails|加入注入防护、PII 脱敏和密钥清理|用户、检索内容、工具和日志之间有安全边界|M4 服务化与模型方案
+48|quality|pytest 自动回归|加入稳定断言和 fake 依赖|固定 RAG 行为可重复验证|M4 服务化与模型方案
+49|generation|LoRA 微调|加入数据格式、adapter 和 base-vs-adapter 门禁|生成能力可变，但与知识更新问题分开|M4 服务化与模型方案
+50|full|Prompt / RAG / 微调选型|按知识更新、可控性、成本和延迟做方案选择|建立三种改造路径的决策边界|M4 服务化与模型方案
+51|full|客服 RAG MVP|建立配置、知识库、组装、业务入口和 CLI|固定检索、证据门、生成和来源返回的产品主链|M5 客服 RAG 产品链
+52|retrieval|多文档知识库|加入目录摄取、稳定 source_id 和 chunk_id|单 FAQ 升级为可追溯多文档索引|M5 客服 RAG 产品链
+53|quality|正式产品链评测|复用 assistant.ask，评答案、引用、拒答并用退出码|评测不复制第二套问答逻辑|M5 客服 RAG 产品链
+54|retrieval|混合检索入主链|把 Chroma、BM25 和 RRF 接进正式 build_retriever|算法 Demo 变成产品默认检索路径|M5 客服 RAG 产品链
+55|augmentation|连续追问与会话隔离|加入 session 历史、追问改写和有限窗口|追问带正确历史进入检索与生成，且不串会话|M5 客服 RAG 产品链
+56|augmentation|LangGraph 客服流|把校验、改写、检索、拒答和生成画成显式图|客服主链分支可见，同时保持 ask 契约|M5 客服 RAG 产品链
+57|augmentation|受控订单查询|加入订单工具和 Repository 归属检查|实时订单从知识检索分流到带身份校验的工具|M5 客服 RAG 产品链
+58|augmentation|工具超时与有限重试|区分临时/永久错误，只对安全只读调用重试|订单工具有可复用故障策略|M5 客服 RAG 产品链
+59|augmentation|证据不足转工单|无证据创建 ticket 并返回 ticket_id|拒答不编答案，而是进入人工闭环|M5 客服 RAG 产品链
+60|augmentation|SQLite 会话持久化|加入 tenant、user、thread 三层边界和重启恢复|增强上下文可持续保存|M5 客服 RAG 产品链
+61|engineering|FastAPI 服务边界|加入 /chat 契约、runtime 组装和 fake application 测试|正式 RAG 入口可被 HTTP 调用|M6 生产边界
+62|augmentation|写操作幂等|加入 Idempotency-Key、请求指纹和结果复用|网络重试不会重复创建工单|M6 生产边界
+63|augmentation|可信身份|加入 JWT 验签、Identity 和业务层传递|身份成为检索过滤和工具授权的可信输入|M6 生产边界
+64|retrieval|增量知识同步|加入内容哈希、upsert/delete/skip 和失败恢复|知识库可更新也可删除|M6 生产边界
+65|augmentation|提示词注入防护|检查用户输入与检索文档，分离指令和数据|不可信文本不能劫持生成或工具路由|M6 生产边界
+66|engineering|PII 脱敏|分离业务原文和脱敏日志副本|业务需要原文，观测系统只收最小必要信息|M6 生产边界
+67|quality|生产 Trace|加入 trace_id、租户/用户/线程边界、阶段耗时和错误分类|能分别定位三步的成功与失败|M6 生产边界
+68|retrieval|安全缓存|缓存键包含 tenant、知识版本和问题|避免跨租户命中或知识更新后返回旧答案|M6 生产边界
+69|quality|CI 质量门|聚合质量指标、阈值和趋势，关键失败 fail closed|坏的 RAG 版本不能继续发布|M6 生产边界
+70|engineering|容器与启动检查|加入 Docker、配置校验、健康检查和 readiness|区分进程启动与 RAG 依赖真正就绪|M6 生产边界
+71|retrieval|向量存储契约|抽象 VectorStore、同步适配和 pgvector schema|业务不绑定 Chroma，检索后端可替换|M7 交付与工作台
+72|quality|容量评估与压测|加入并发、吞吐、p95/p99、错误率和阈值|判断三步在目标负载下是否可用|M7 交付与工作台
+73|quality|用户反馈闭环|加入点赞/点踩、原因、trace 关联和 API|用户对答案、引用和拒答的体验进入质量数据|M7 交付与工作台
+74|generation|模型供应商降级|加入主/备 Provider 和可重试错误分类|生成供应商故障时仍可解释降级|M7 交付与工作台
+75|engineering|备份与恢复|备份会话/工单，执行 restore 并核对|增强状态丢失后可以恢复|M7 交付与工作台
+76|full|统一业务应用|把 RAG、会话、订单、工单和反馈收敛到同一入口|前端、评测和 API 调用同一条真实主链|M7 交付与工作台
+77|quality|面试与项目证据|用源码、测试、报告和边界组成证据链|别人可以解释三步如何工作和如何验证|M7 交付与工作台
+78|quality|最终验收|覆盖正常、拒答、越权、故障、幂等、恢复、安全和质量门|三步的正向与失败路径一起成为发布标准|M7 交付与工作台
+79|full|Vite 前端工作台|加入 JWT、多轮聊天、来源、订单、工单、反馈|用户可以直接看到检索证据、增强分支和生成答案|M7 交付与工作台
+80|quality|测试策略与风险建模|加入 impact×likelihood 风险分和覆盖缺口|优先测试最危险的检索、增强和生成风险|M8 AI 质量工程
+81|quality|评测数据工程|加入 EvalCase schema、版本、标签切片和 JSON 持久化|评测输入可版本化、筛选和回放|M8 AI 质量工程
+82|quality|Mock、契约与不变量|加入结构、拒答和业务关系测试|隔离外部波动，固定关键行为|M8 AI 质量工程
+83|retrieval|RAG 分层自动化测试|加入 Recall@k、Precision@k、MRR 和引用覆盖|单独定位召回错、排序错和引用缺|M8 AI 质量工程
+84|quality|Judge 校准|加入人工标签、阈值、agreement、kappa 和混淆矩阵|证明自动裁判可信后再影响质量门|M8 AI 质量工程
+85|augmentation|Agent 自动化测试|加入工具白名单、审批、步骤预算和轨迹动作校验|增强过程本身成为测试对象|M8 AI 质量工程
+86|engineering|AI API、SSE 与 E2E|加入 HTTP 契约、SSE 解析、token 合并和端到端校验|三步结果经过网络和前端后仍可验证|M8 AI 质量工程
+87|engineering|安全、韧性与性能|加入输入边界、有限重试、百分位延迟和 SLO|能通不再等于可靠|M8 AI 质量工程
+88|quality|CI 分层门禁|汇总 unit、contract、RAG、安全和性能结果，识别 flaky|必需层缺失或失败时阻断发布|M8 AI 质量工程
+89|quality|线上质量反馈闭环|加入 BadCase 去重、人工审核和回归集导出|线上坏答案回流评测，再由 CI 保护后续版本|M8 AI 质量工程
+90|augmentation|Few-shot 意图契约|加入有限意图、示例和 unknown 处理|进入检索、工具或生成前先确认业务路径|M9 对话业务契约
+91|augmentation|槽位抽取与缺参追问|加入订单号等槽位、合并、追问和跨轮保存|生成前必要参数显式化，不让模型猜|M9 对话业务契约
+92|generation|稳定 JSON|加入 fenced JSON 提取、Schema 校验和一次受控修复|生成结果格式错误时有限修复，失败明确降级|M9 对话业务契约
+93|augmentation|客服业务工作流|串联分类、补参、执行和 handoff 的状态机|只有意图明确且槽位齐全才进入业务能力|M9 对话业务契约
+94|engineering|PostgreSQL 会话层|加入 schema、参数化 Repository、事务和 RLS|增强上下文的租户隔离下沉到数据库|M10 数据与推理基础设施
+95|augmentation|安全查询 PostgreSQL|加入查询目录、只读 SQL 校验、参数绑定和计划门禁|结构化数据工具可用但不能任意执行 SQL|M10 数据与推理基础设施
+96|engineering|Redis 缓存与限流|加入租户/版本缓存键、失效和固定窗口限流|加速三步但不让旧知识和热点请求破坏结果|M10 数据与推理基础设施
+97|retrieval|向量库选型与适配|比较 pgvector/Qdrant/Milvus，加入 Qdrant tenant filter|向量检索变成可审查的容量、过滤和运维决策|M10 数据与推理基础设施
+98|engineering|Compose 与 Linux 运维|加入 Postgres、Redis、Qdrant Compose、健康检查和运维手册|检索数据层、缓存和会话成为可复现交付单元|M10 数据与推理基础设施
+99|generation|OpenAI-compatible Provider|统一云 API、Ollama 和 vLLM 的端点与配置契约|客服工作流不绑定具体模型 SDK|M10 数据与推理基础设施
+100|generation|vLLM 与 GPU 配置|加入 vLLM serve 参数、并行度、显存和 GPU profile|生成模型进入可配置自托管环境|M10 数据与推理基础设施
+101|generation|推理基准与容量决策|加入 TTFT、吞吐、p95、质量门、量化和 KV Cache|先过质量回归，再用性能证据决定优化和容量|M10 数据与推理基础设施
+102|augmentation|MCP HTTP 鉴权|加入 audience、scope、最小权限、写工具审批和审计|工具增强必须经过协议级授权|M11 协议与跨 Agent
+103|augmentation|A2A Agent Card 与任务|加入 Agent Card、Task 状态机、仓储和 messageId 幂等|跨 Agent 增强变成有能力声明、有状态的任务|M11 协议与跨 Agent
+104|augmentation|A2A JSON-RPC、REST 与 SSE|加入提交、查询、取消、错误映射和事件流边界|异步增强任务有可验证协议|M11 协议与跨 Agent
+105|full|客服 Agent → 订单 Agent|提取订单号，带受控委托上下文调用订单 Agent 并完成验收|最终回答基于 RAG 证据或受控 Agent 结果，而不是凭空生成|M11 协议与跨 Agent
+`.trim();
+
+const days = rawDays.split("\n").map(line => {
+  const [day, stage, title, change, effect, phase] = line.split("|");
+  return { day: Number(day), stage, title, change, effect, phase };
+});
+
+const stageNames = {
+  all: "全部",
+  retrieval: "检索",
+  augmentation: "增强",
+  generation: "生成",
+  quality: "质量外环",
+  engineering: "工程外环",
+  full: "全链路"
+};
+const stageShort = { retrieval: "检索", augmentation: "增强", generation: "生成", quality: "质量", engineering: "工程", full: "全链路" };
+const moduleData = [
+  ["M0", "生成基座", "Day1–6", "先让模型能调用、可控输出、记忆上下文和使用工具。", "generation"],
+  ["M1", "检索链", "Day7–17", "从加载切块走到向量、混合、改写、持久化和重排。", "retrieval"],
+  ["M2", "质量闭环", "Day18–26", "给答案、引用、拒答、轨迹和版本变化加指标。", "quality"],
+  ["M3", "增强与控制流", "Day27–40", "用图、状态、循环、路由、审批和协议组织上下文。", "augmentation"],
+  ["M4", "服务化与模型方案", "Day41–50", "把三步放进 API、容器和可切换模型服务。", "engineering"],
+  ["M5", "客服 RAG 产品链", "Day51–60", "在同一产品接入多文档、会话、订单、工单和持久化。", "full"],
+  ["M6", "生产边界", "Day61–70", "补齐身份、幂等、增量知识、安全、Trace、缓存和 readiness。", "engineering"],
+  ["M7", "交付与工作台", "Day71–79", "让系统可迁移、可压测、可恢复、可演示。", "full"],
+  ["M8", "AI 质量工程", "Day80–89", "把风险、RAG 指标、Judge、轨迹、SLO 和 bad case 串起来。", "quality"],
+  ["M9", "对话业务契约", "Day90–93", "用意图、槽位、稳定 JSON 和工作流限制动作。", "augmentation"],
+  ["M10", "数据与推理基础设施", "Day94–101", "补齐数据库、缓存、向量服务、Provider、vLLM 和基准。", "engineering"],
+  ["M11", "协议与跨 Agent", "Day102–105", "把工具授权和 Agent 委托纳入协议和任务验收。", "augmentation"]
+];
+
+const refFor = day => {
+  if (day >= 51) return `../day${String(day).padStart(2, "0")}/README.md`;
+  if (day <= 10) return "../docs/day01-10_overview.md";
+  if (day <= 20) return "../docs/day11-20_overview.md";
+  if (day <= 30) return "../docs/day21-30_overview.md";
+  if (day <= 40) return "../docs/day31-40_overview.md";
+  return "../docs/day41-50_overview.md";
+};
+
+const moduleGrid = document.getElementById("module-grid");
+moduleData.forEach(([id, name, range, desc, stage], index) => {
+  const card = document.createElement("article");
+  card.className = `module-card${index === 1 || index === 4 ? " featured" : ""}`;
+  card.innerHTML = `<div class="module-top"><h3>${id} · ${name}</h3><span class="module-days">${range}</span></div><p>${desc}</p><span class="tag ${stage}-tag">${stageNames[stage]}</span>`;
+  moduleGrid.appendChild(card);
+});
+
+const filters = document.getElementById("filters");
+const filterOrder = ["all", "retrieval", "augmentation", "generation", "quality", "engineering", "full"];
+let selectedStage = "all";
+let selectedDay = 9;
+filterOrder.forEach(stage => {
+  const button = document.createElement("button");
+  button.type = "button";
+  button.className = "filter";
+  button.dataset.stage = stage;
+  button.setAttribute("aria-pressed", stage === selectedStage ? "true" : "false");
+  button.textContent = stageNames[stage];
+  button.addEventListener("click", () => {
+    selectedStage = stage;
+    if (selectedStage !== "all" && days.find(record => record.day === selectedDay)?.stage !== selectedStage) {
+      selectedDay = days.find(record => record.stage === selectedStage).day;
+    }
+    document.querySelectorAll(".filter").forEach(item => item.setAttribute("aria-pressed", item.dataset.stage === selectedStage ? "true" : "false"));
+    renderDays();
+  });
+  filters.appendChild(button);
+});
+
+const dayGrid = document.getElementById("day-grid");
+const detail = document.getElementById("detail");
+const count = document.getElementById("count");
+function renderDetail(record) {
+  const ref = refFor(record.day);
+  detail.innerHTML = `<span class="tag ${record.stage}-tag">Day ${record.day} · ${stageNames[record.stage]}</span><h3>${record.title}</h3><p>${record.change}</p><div class="detail-effect"><strong>对主线的修改：</strong>${record.effect}</div><a class="detail-ref" href="${ref}">打开对应阶段资料 ↗</a>`;
+}
+function renderDays() {
+  dayGrid.innerHTML = "";
+  const visible = days.filter(record => selectedStage === "all" || record.stage === selectedStage);
+  count.textContent = `${stageNames[selectedStage]} · ${visible.length} 天`;
+  days.forEach(record => {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = `day-button ${record.stage}${selectedStage !== "all" && selectedStage !== record.stage ? " is-hidden" : ""}`;
+    button.setAttribute("aria-pressed", record.day === selectedDay ? "true" : "false");
+    button.setAttribute("aria-label", `Day ${record.day}：${record.title}`);
+    button.innerHTML = `<span class="num">D${record.day}</span><span class="mini">${stageShort[record.stage]}</span>`;
+    button.addEventListener("click", () => {
+      selectedDay = record.day;
+      document.querySelectorAll(".day-button").forEach(item => item.setAttribute("aria-pressed", item.getAttribute("aria-label").startsWith(`Day ${selectedDay}：`) ? "true" : "false"));
+      renderDetail(record);
+    });
+    dayGrid.appendChild(button);
+  });
+  renderDetail(days.find(record => record.day === selectedDay));
+}
+renderDays();
+
+const phaseLanes = document.getElementById("phase-lanes");
+const phases = [...new Set(days.map(record => record.phase))];
+phases.forEach(phase => {
+  const lane = document.createElement("div");
+  lane.className = "phase-lane";
+  const track = document.createElement("div");
+  track.className = "phase-track";
+  const phaseDays = days.filter(record => record.phase === phase);
+  phaseDays.forEach(record => {
+    const segment = document.createElement("div");
+    segment.className = `phase-segment ${record.stage}`;
+    segment.style.flex = "1 1 0";
+    segment.title = `Day ${record.day} · ${record.title}`;
+    if (phaseDays.length <= 12) segment.innerHTML = `<span>${record.day}</span>`;
+    track.appendChild(segment);
+  });
+  lane.innerHTML = `<div class="phase-label">${phase}</div>`;
+  lane.appendChild(track);
+  phaseLanes.appendChild(lane);
+});
+</script>

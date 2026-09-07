@@ -33,10 +33,27 @@ def build_embeddings(model_name: str, device: str):
 
 
 def build_chat_model(settings: Settings):
-    """创建 DeepSeek 聊天模型，并暴露统一的 ``invoke`` 接口。"""
+    """创建聊天模型，并暴露统一的 ``invoke`` 接口。
+
+    支持两种 provider：
+    - ``deepseek``：使用 OpenAI 兼容接口（云端，需要 API key）。
+    - ``ollama``：使用本地 Ollama 原生 HTTP 接口（无需 API key）。
+      绕开 OpenAI 兼容层的 ``tools: []`` 问题，避免 qwen3 等模型返回 502。
+    """
+
+    if settings.llm_provider == "ollama":
+        from .ollama_model import OllamaChatModel
+
+        return OllamaChatModel(
+            model=settings.llm_model,
+            base_url=settings.llm_base_url,
+            temperature=0,
+        )
 
     if settings.llm_provider != "deepseek":
-        raise ValueError(f"当前版本仅支持 DeepSeek，收到 LLM_PROVIDER={settings.llm_provider}")
+        raise ValueError(
+            f"当前版本仅支持 deepseek / ollama，收到 LLM_PROVIDER={settings.llm_provider}"
+        )
     # 在发送网络请求前检查密钥，给出比底层 401 更直接的错误信息。
     if not settings.llm_api_key:
         raise RuntimeError("使用 DeepSeek 时必须配置 LLM_API_KEY")

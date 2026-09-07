@@ -6,6 +6,7 @@
 
 from __future__ import annotations
 
+import argparse
 from collections.abc import Callable
 
 # ``SupportAnswer`` 是问答结果的数据格式；``build_application`` 会把真实的模型、
@@ -84,8 +85,25 @@ def run_interactive(
             output(f"处理问题时出错（{type(exc).__name__}）：{exc}")
 
 
-def main() -> int:
+def main(argv: list[str] | None = None) -> int:
     """提供给命令行脚本的统一入口；返回 0 表示正常结束。"""
+
+    parser = argparse.ArgumentParser(description="企业客服知识库助手")
+    parser.add_argument(
+        "--serve",
+        action="store_true",
+        help="以 HTTP 服务方式启动（FastAPI），默认监听 127.0.0.1:8000",
+    )
+    parser.add_argument("--host", default="127.0.0.1", help="HTTP 服务监听地址")
+    parser.add_argument("--port", type=int, default=19100, help="HTTP 服务监听端口（8000/8080 常被 Hyper-V 占用）")
+    args = parser.parse_args(argv)
+
+    if args.serve:
+        from src.server import main as serve_main
+
+        serve_main(host=args.host, port=args.port)
+        return 0
+
     run_interactive()
     return 0
 

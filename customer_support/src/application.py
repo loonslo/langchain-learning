@@ -12,7 +12,7 @@ from typing import Protocol
 
 from src.assistant import SupportAnswer
 from src.conversation import History, Turn
-from src.orders import OrderRepository
+from src.orders import OrderRepository, OrderNotFound, ForbiddenOrder
 from src.tickets import TicketStore, escalate
 from src.tool_runner import call_read_only
 
@@ -78,11 +78,17 @@ class SupportApplication:
         """
 
         if order_id:
-            # 订单查询被包装为只读工具调用；最多尝试两次，写操作不应套用此重试器。
-            tool_result = call_read_only(
-                lambda: self.orders.get_for_user(order_id, user_id),
-                max_attempts=2,
-            )
+            try:
+                # 订单查询被包装为只读工具调用；最多尝试两次，写操作不应套用此重试器。
+                tool_result = call_read_only(
+                    lambda: self.orders.get_for_user(order_id, user_id),
+                    max_attempts=2,
+                )
+            except (OrderNotFound, ForbiddenOrder) as exc:
+                # 业务异常不应冒泡成 500：未找到或无权访问都归为友好的“查无订单”提示。
+                return ApplicationResult(
+                    SupportAnswer(f"未查询到订单 {order_id}：{exc}。请确认订单号是否正确。", ("order-system",))
+                )
             # 工具层用 error 字段表达已归类的失败，应用层负责转换成用户可读文案。
             if tool_result.error:
                 return ApplicationResult(SupportAnswer("订单系统暂时不可用，请稍后重试。", ("order-system",)))

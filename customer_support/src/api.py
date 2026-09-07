@@ -3,6 +3,7 @@
 from typing import Protocol
 
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 from .application import ApplicationResult
 from .assistant import SupportAnswer
@@ -28,6 +29,15 @@ class ChatResponse(BaseModel):
 
 def create_app(service: Service) -> FastAPI:
     app = FastAPI(title="Customer Support Copilot", version="0.1.0")
+
+    # 允许前端静态站点（端口与后端不同，属跨域）访问接口。
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["*"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
 
     @app.get("/health")
     def health():
