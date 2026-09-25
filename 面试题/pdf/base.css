@@ -1,0 +1,229 @@
+/* ============================================================
+   Agent 面试通读本 —— 排版基座
+   派生自 huashu-report/assets/base.css。
+   · 「承重」段：页面几何、分页规则、表格防粘连。不许改。
+   · 「调味」段：视觉方向「工程网格」的色板与字体。只换变量不改选择器。
+   页面模式 A（A4 竖版）：页边距由 render.py 的 margin 参数唯一决定。
+   Windows 字体栈：PingFang SC 在 Windows 上不存在，会静默回退，
+   所以把 Microsoft YaHei 提到前面；等宽用 Consolas。
+   ============================================================ */
+
+/* ── 调味：设计令牌（工程网格：黑白灰 + 单一功能色） ───── */
+:root {
+  --ink:   #1c1c1c;
+  --mute:  #6b6b6b;
+  --mute2: #9a9a9a;
+  --rule:  #d8d8d8;
+  --rule-soft: #e8ecee;
+  --brand: #1b4fd8;   /* 唯一功能色：图表、章节标记、强调数字 */
+  --accent:#b45309;   /* 语义警示：红旗、常见错误 */
+  --paper: #ffffff;
+
+  --fs-body: 10.2pt;  --lh-body: 1.72;
+  --fs-table: 8.9pt;  --lh-table: 1.5;
+  --fs-caption: 7.8pt;--lh-caption: 1.5;
+  --fs-h2: 23pt;
+  --fs-h3: 13.5pt;
+  --fs-h4: 11pt;
+  --fs-figtitle: 10.5pt;
+
+  --font-sans: 'Helvetica Neue','Microsoft YaHei','PingFang SC',
+               'Source Han Sans SC','Noto Sans SC',Arial,sans-serif;
+  --font-mono: 'Consolas','Cascadia Mono','Courier New',monospace;
+  --font-body: var(--font-sans);
+  --font-head: var(--font-sans);
+}
+
+/* ── 承重：基础文本 ───────────────────────────────────── */
+html, body { margin: 0; padding: 0; }
+body {
+  font-family: var(--font-body);
+  font-size: var(--fs-body);
+  line-height: var(--lh-body);
+  color: var(--ink);
+  background: var(--paper);
+  -webkit-print-color-adjust: exact; print-color-adjust: exact;
+}
+p { margin: 0 0 .62em; orphans: 2; widows: 2; }
+h1, h2, h3, h4 {
+  font-family: var(--font-head);
+  line-height: 1.28;
+  page-break-after: avoid; break-after: avoid;
+}
+h2 { font-size: var(--fs-h2); }
+h3 { font-size: var(--fs-h3); }
+h4 { font-size: var(--fs-h4); }
+strong, b { font-weight: 700; }
+em { font-style: normal; font-weight: 700; color: var(--brand); }
+
+/* ── 承重：分页容器（一个容器 = 一章） ───────────────── */
+table.pagewrap { width: 100%; border-collapse: collapse;
+                 page-break-after: always; table-layout: auto; }
+table.pagewrap > thead { display: table-header-group; }
+table.pagewrap > thead .crumb {
+  font-size: 6.8pt; color: var(--mute); letter-spacing: .04em;
+  padding-bottom: 3mm; border-bottom: .4pt solid var(--rule-soft);
+}
+
+/* ── 承重：数据表防粘连四件套 ─────────────────────────── */
+table:not(.pagewrap) {
+  width: 100%; border-collapse: collapse;
+  table-layout: fixed;
+  page-break-inside: auto;
+  font-size: var(--fs-table); line-height: var(--lh-table);
+  font-variant-numeric: tabular-nums;
+  margin: 2.2mm 0 3.4mm;
+}
+table:not(.pagewrap) thead { display: table-header-group; }
+table:not(.pagewrap) tr { page-break-inside: avoid; }
+table:not(.pagewrap) td, table:not(.pagewrap) th {
+  overflow-wrap: anywhere;
+  text-align: left;
+  vertical-align: top;
+  padding: 1.8mm 3.4mm;
+}
+table:not(.pagewrap) td + td,
+table:not(.pagewrap) th + th { border-left: .5px solid var(--rule-soft); }
+table:not(.pagewrap) th { border-bottom: .7pt solid var(--ink);
+                          font-weight: 700; background: #f7f8f9; }
+table:not(.pagewrap) td { border-bottom: .4pt solid var(--rule-soft); }
+table:not(.pagewrap) tbody tr:last-child td { border-bottom: none; }
+
+/* ── 附录索引表：行更紧，编号列不折行，地址可点击 ───────── */
+table.idx td, table.idx th { padding: 1.3mm 2.6mm; }
+table.idx td:first-child { white-space: nowrap; }
+.url { font-size: 8pt; letter-spacing: -.015em; }
+.url a { color: #2b4fa8; text-decoration: none; }
+.nw { white-space: nowrap; }
+
+/* ── 承重：长串必须能断行 ─────────────────────────────── */
+body, p, li, h2, h3, .side, .src, .caption, .dat, .toc,
+code, .mono, .url { overflow-wrap: anywhere; }
+
+/* ── 承重：flex 两栏——给两边都写 min-width ────────────── */
+.row2 { display: flex; flex-wrap: wrap; align-items: baseline; gap: 3mm; }
+.row2 > .a { flex: 1 1 55%; min-width: 62mm; }
+.row2 > .b { flex: 1 1 30%; min-width: 46mm; }
+
+/* ── 承重：视觉锚数字不许被拦腰折断 ───────────────────── */
+.bignums { display: flex; flex-wrap: wrap; gap: 6mm 11mm; break-inside: avoid;
+           margin: 3mm 0 4mm; }
+.bignums .n { white-space: nowrap; word-break: keep-all; }
+
+/* ── 承重：章末孤儿段 ─────────────────────────────────── */
+.pagewrap td > p:last-child,
+.pagewrap td > p:nth-last-child(2) { break-before: avoid; page-break-before: avoid; }
+
+/* ── 承重：图表与方框 ─────────────────────────────────── */
+.fig, .box, .qa, .flagbox, .card { page-break-inside: avoid; }
+.fig svg { display: block; max-width: 100%; }
+.figtitle { font-size: var(--fs-figtitle); font-weight: 700; margin: 0 0 1.6mm; }
+.src, .caption {
+  font-size: var(--fs-caption); line-height: var(--lh-caption);
+  color: var(--mute); margin-top: 1.4mm;
+}
+
+/* ============================================================
+   工程网格：组件
+   ============================================================ */
+
+/* 章首 */
+.chead { margin: 0 0 6mm; padding-bottom: 3.5mm;
+         border-bottom: 1.4pt solid var(--ink); }
+.chead .cnum { font-size: 7.4pt; letter-spacing: .22em; color: var(--brand);
+               font-weight: 700; }
+.chead h2 { margin: .8mm 0 1.6mm; letter-spacing: -.01em; }
+.chead .chook { font-size: 10.6pt; color: var(--mute); margin: 0; }
+
+/* 侧栏：口径、边界、补充说明 */
+.side { background: #f7f8f9; border-left: 2.4pt solid var(--brand);
+        padding: 2.6mm 3.4mm; margin: 2.6mm 0 3.4mm;
+        font-size: 8.9pt; line-height: 1.62; }
+.side .lbl { font-weight: 700; color: var(--brand); letter-spacing: .06em;
+             font-size: 7.6pt; display: block; margin-bottom: 1mm; }
+.side p { margin: 0 0 .4em; }
+.side p:last-child { margin-bottom: 0; }
+
+/* 面试追问块 */
+.qa { border-top: .7pt solid var(--rule); padding-top: 2.4mm;
+      margin: 3.2mm 0; }
+.qa .q { font-weight: 700; }
+.qa .q::before { content: "追问　"; color: var(--brand); font-size: 8pt;
+                 letter-spacing: .1em; }
+.qa .a { margin: .8mm 0 0 0; color: var(--ink); }
+.qa .a::before { content: "答　"; color: var(--mute); font-size: 8pt;
+                 letter-spacing: .1em; }
+.qa + .qa { margin-top: 2.4mm; }
+
+/* 红旗清单 */
+.flagbox { border: .7pt solid #e2c9a8; background: #fdf9f3;
+           padding: 2.8mm 3.4mm; margin: 3mm 0; }
+.flagbox .lbl { font-weight: 700; color: var(--accent); letter-spacing: .06em;
+                font-size: 7.6pt; display: block; margin-bottom: 1.4mm; }
+
+/* 记分卡 / 规格卡 */
+.card { border: .7pt solid var(--rule); padding: 2.8mm 3.4mm; margin: 2.4mm 0;
+        break-inside: avoid; }
+.card .t { font-weight: 700; margin: 0 0 1mm; }
+.card .m { font-size: 8.6pt; color: var(--mute); margin: 0; }
+
+/* 等宽标注：代码、版本号、字段名 */
+code, .mono { font-family: var(--font-mono); font-size: .92em;
+              background: #f4f5f6; padding: .3mm 1mm; border-radius: 1px; }
+pre { font-family: var(--font-mono); font-size: 8.4pt; line-height: 1.5;
+      background: #f7f8f9; border-left: 2.4pt solid var(--rule);
+      padding: 2.6mm 3.4mm; margin: 2.4mm 0 3.2mm;
+      overflow-wrap: anywhere; white-space: pre-wrap;
+      page-break-inside: avoid; }
+pre code { background: none; padding: 0; font-size: 1em; }
+
+/* 标签 */
+.tag { font-family: var(--font-mono); font-size: 7.4pt; color: var(--mute);
+       border: .5pt solid var(--rule); padding: .2mm 1.4mm;
+       border-radius: 1.5px; white-space: nowrap; }
+
+/* 大数字行 */
+.bignums .item { min-width: 38mm; }
+.bignums .v { font-size: 27pt; font-weight: 700; letter-spacing: -.02em;
+              line-height: 1; color: var(--brand); font-variant-numeric: tabular-nums; }
+.bignums .k { font-size: 8.4pt; color: var(--mute); margin-top: 1.4mm;
+              line-height: 1.45; }
+
+/* 整段引文 */
+.pull { border-left: 2.4pt solid var(--ink); padding: 1mm 0 1mm 4mm;
+        margin: 3.4mm 0; font-size: 11.4pt; line-height: 1.6; }
+.pull p { margin: 0; }
+
+/* 目录 */
+.toc { font-size: 10pt; }
+.toc .grp { font-weight: 700; font-size: 7.6pt; letter-spacing: .18em;
+            color: var(--brand); margin: 4.2mm 0 1.6mm;
+            border-bottom: .7pt solid var(--rule); padding-bottom: 1mm; }
+.toc .l1 { display: flex; align-items: baseline; margin: 0 0 1.5mm; }
+.toc .l1 .nm { flex: 1 1 auto; min-width: 40mm; }
+.toc .l1 .dots { flex: 0 0 auto; color: var(--rule); margin: 0 1.6mm;
+                 letter-spacing: .1em; }
+.toc .l1 .pg { flex: 0 0 8mm; text-align: right;
+               font-variant-numeric: tabular-nums; }
+.toc .l2 { font-size: 8.8pt; color: var(--mute); margin: 0 0 1.1mm 6mm; }
+
+/* 封面 */
+.cover { height: 245mm; display: flex; flex-direction: column;
+         justify-content: space-between; }
+.cover .top { border-top: 2.4pt solid var(--ink); padding-top: 4mm; }
+.cover .kicker { font-family: var(--font-mono); font-size: 8pt;
+                 letter-spacing: .2em; color: var(--brand); }
+.cover h1 { font-size: 40pt; line-height: 1.14; letter-spacing: -.025em;
+            margin: 16mm 0 0; }
+.cover .sub { font-size: 12.4pt; color: var(--mute); margin: 5mm 0 0;
+              max-width: 128mm; line-height: 1.6; }
+.cover .meta { font-family: var(--font-mono); font-size: 8.4pt; color: var(--mute);
+               line-height: 1.85; border-top: .7pt solid var(--rule);
+               padding-top: 3mm; }
+
+/* 序章：与正文区分 */
+.frontmatter { font-size: 10.6pt; }
+.frontmatter .lead { font-size: 12pt; line-height: 1.68; color: var(--ink); }
+
+/* 尾声 */
+.ending { border-top: 1.4pt solid var(--ink); padding-top: 4mm; margin-top: 6mm; }
