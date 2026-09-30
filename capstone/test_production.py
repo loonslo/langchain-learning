@@ -477,6 +477,68 @@ def test_citations_are_derived_from_retrieved_documents(monkeypatch):
     assert result.input_tokens + result.output_tokens == 7
 
 
+def _answer_with_fake_model(monkeypatch, content: str):
+    """用假模型回答固定文本，检索结果固定为一个真实文档，只观察回答后的来源处理。"""
+
+    class FakeLlm:
+        def invoke(self, *args, **kwargs):
+            return SimpleNamespace(content=content, usage_metadata={}, response_metadata={})
+
+    kb = KnowledgeBase(
+        tenant_id="acme",
+        docs_dir=Path("."),
+        persist_dir=Path(".tmp/test-refusal-citations"),
+        embeddings=object(),
+    )
+    monkeypatch.setattr(
+        kb,
+        "retrieve",
+        lambda *args, **kwargs: [
+            Document(
+                page_content="RAG 先检索再生成。",
+                metadata={
+                    "source": "真实.md",
+                    "source_id": "真实.md",
+                    "chunk_id": "real-chunk-1",
+                    "tenant_id": "acme",
+                    "visibility": "public",
+                },
+            )
+        ],
+    )
+    monkeypatch.setattr(C, "get_reliable_llm", lambda **kwargs: FakeLlm())
+    return kb.answer_with_usage(
+        "LangChain 是哪一年发布的？",
+        user=User("alice", tenant_id="acme"),
+        model="deepseek",
+        request_id="request-refusal",
+    )
+
+
+@pytest.mark.parametrize(
+    "content",
+    [
+        "文档中没有提到",
+        "文档中没有提到。",
+        "“文档中没有提到”",
+        " 文档中没有提到 \n",
+        "文档中没有提到 LangChain 的发布年份。",
+    ],
+)
+def test_model_refusal_carries_no_citations(monkeypatch, content):
+    result = _answer_with_fake_model(monkeypatch, content)
+
+    assert result.citations == ()
+    assert "【来源" not in result.text
+
+
+def test_answer_that_only_mentions_the_gap_keeps_its_citations(monkeypatch):
+    result = _answer_with_fake_model(monkeypatch, "RAG 先检索再生成；文档中没有提到具体年份。")
+
+    assert [citation.source_id for citation in result.citations] == ["真实.md"]
+    assert result.text.endswith("【来源：真实.md】")
+
+
 def test_context_plan_applies_acl_before_budget_and_rejects_duplicate_ids():
     from .context import ContextBudget, plan_documents
 

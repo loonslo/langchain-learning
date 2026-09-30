@@ -1,4 +1,4 @@
-"""Day51–78 单项目里程碑目录与证据入口。"""
+"""旗舰项目后端步骤与 capstone 能力证据入口（仅检查文件存在）。"""
 
 from __future__ import annotations
 
@@ -8,13 +8,15 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Literal
 
+from tools.course_catalog import step_label
+
 ROOT = Path(__file__).resolve().parent.parent
 Status = Literal["integrated", "partial"]
 
 
 @dataclass(frozen=True)
 class Milestone:
-    day: int
+    step: str
     title: str
     status: Status
     story: str
@@ -24,20 +26,22 @@ class Milestone:
 
 MILESTONES = (
     Milestone(
-        51,
+        "m1-rag-mvp/step1",
         "客服知识库 v0.1",
         "integrated",
         "用已学 LangChain 组件完成第一个可用客服 RAG",
         (
-            "day51/README.md",
-            "day51/src/customer_support/assistant.py",
-            "day51/data/knowledge/customer_faq.md",
-            "day51/tests/test_assistant.py",
+            "flagship-project/m1-rag-mvp/step1/README.md",
+            "flagship-project/m1-rag-mvp/step1/src/customer_support/assistant.py",
+            "flagship-project/m1-rag-mvp/step1/data/knowledge/customer_faq.md",
+            "flagship-project/m1-rag-mvp/step1/tests/test_assistant.py",
         ),
-        ("cd day51 && pytest -q",),
+        (
+            "python -m pytest -c flagship-project/m1-rag-mvp/step1/pyproject.toml flagship-project/m1-rag-mvp/step1/tests -q",
+        ),
     ),
     Milestone(
-        52,
+        "m1-rag-mvp/step2",
         "最小知识问答",
         "integrated",
         "真实语料进入 RAG 与统一服务",
@@ -45,7 +49,7 @@ MILESTONES = (
         ("python -m capstone.main build",),
     ),
     Milestone(
-        53,
+        "m1-rag-mvp/step3",
         "质量基线",
         "partial",
         "检索、生成、引用和结构化输出分层评测",
@@ -53,7 +57,7 @@ MILESTONES = (
         ("python -m capstone.main eval",),
     ),
     Milestone(
-        54,
+        "m1-rag-mvp/step4",
         "增量摄取",
         "integrated",
         "正文、ACL 和管线配置共同形成知识版本",
@@ -61,7 +65,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        55,
+        "m2-session-langgraph/step1",
         "授权边界",
         "integrated",
         "查询前 ACL、默认拒绝和租户隔离",
@@ -69,7 +73,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        56,
+        "m2-session-langgraph/step2",
         "可信身份",
         "integrated",
         "JWT、多租户、角色和共享限流",
@@ -77,7 +81,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        57,
+        "m3-order-tool-reliability/step1",
         "上下文工程",
         "integrated",
         "ACL 前置、预算和不可信资料封装进入 RAG",
@@ -85,7 +89,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        58,
+        "m3-order-tool-reliability/step2",
         "统一服务与可靠性",
         "integrated",
         "API、CLI、评测共享 AssistantService",
@@ -93,7 +97,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        59,
+        "m3-order-tool-reliability/step3",
         "分层 CI",
         "partial",
         "离线、真实模型和发布门禁分层",
@@ -101,7 +105,7 @@ MILESTONES = (
         ("python -m capstone.ci_gate",),
     ),
     Milestone(
-        60,
+        "m3-order-tool-reliability/step4",
         "改进实验",
         "partial",
         "从 bad case 到候选方案推广决策",
@@ -109,7 +113,7 @@ MILESTONES = (
         ("python -m capstone.improvement_loop",),
     ),
     Milestone(
-        61,
+        "m4-api-identity-security/step1",
         "受控业务查询",
         "integrated",
         "query_id、可信身份、只读连接和超时",
@@ -117,7 +121,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        62,
+        "m4-api-identity-security/step2",
         "受控工具编排",
         "partial",
         "结构化模式、工具白名单和显式能力契约",
@@ -125,7 +129,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        63,
+        "m4-api-identity-security/step3",
         "持久化审批",
         "integrated",
         "租户隔离、过期和一次性决策",
@@ -133,7 +137,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        64,
+        "m4-api-identity-security/step4",
         "长期记忆",
         "integrated",
         "显式设置、查看、删除和隔离偏好",
@@ -141,7 +145,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        65,
+        "m5-injection-pii-observability/step1",
         "内容安全",
         "integrated",
         "输入输出审核、失败关闭和无明文审计",
@@ -149,7 +153,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        66,
+        "m5-injection-pii-observability/step2",
         "Provider 契约",
         "partial",
         "统一工厂和保守能力声明",
@@ -157,7 +161,7 @@ MILESTONES = (
         ("python -m capstone.provider_contract",),
     ),
     Milestone(
-        67,
+        "m5-injection-pii-observability/step3",
         "可观测与告警",
         "partial",
         "租户指标、样本门槛和告警退出码",
@@ -165,7 +169,7 @@ MILESTONES = (
         ("python -m capstone.monitoring_cli --demo",),
     ),
     Milestone(
-        68,
+        "m5-injection-pii-observability/step4",
         "向量存储迁移",
         "partial",
         "pgvector 迁移、幂等和 ACL",
@@ -173,7 +177,7 @@ MILESTONES = (
         ("python -m capstone.vector_store_pg migration",),
     ),
     Milestone(
-        69,
+        "m6-quality-gate-container/step1",
         "容量验证",
         "partial",
         "认证 API 的 fake/real 压测与 SLO",
@@ -181,7 +185,7 @@ MILESTONES = (
         ("python -m capstone.load_test --fake --users 2 --time 5s",),
     ),
     Milestone(
-        70,
+        "m6-quality-gate-container/step2",
         "交付制品",
         "partial",
         "容器、非 root 和启动检查",
@@ -189,7 +193,7 @@ MILESTONES = (
         ("python -m capstone.deployment_check",),
     ),
     Milestone(
-        71,
+        "m7-capacity-feedback-recovery/step1",
         "Staging 发布",
         "partial",
         "部署、smoke、灰度和回滚",
@@ -197,7 +201,7 @@ MILESTONES = (
         ("python -m capstone.deployment_check --base-url <url>",),
     ),
     Milestone(
-        72,
+        "m7-capacity-feedback-recovery/step2",
         "备份恢复",
         "partial",
         "恢复后重新验证权限与质量",
@@ -205,7 +209,7 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        73,
+        "m7-capacity-feedback-recovery/step3",
         "事故演练",
         "partial",
         "故障注入、runbook 和 postmortem",
@@ -213,15 +217,15 @@ MILESTONES = (
         ("pytest capstone/test_production.py -q",),
     ),
     Milestone(
-        74,
+        "m7-capacity-feedback-recovery/step4",
         "上线评审",
         "partial",
         "Production Readiness Review",
         ("capstone/docs/production_readiness.md",),
-        ("python -m capstone.milestones 74",),
+        ("python -m capstone.milestones m7-capacity-feedback-recovery/step4",),
     ),
     Milestone(
-        75,
+        "m7-capacity-feedback-recovery/step5",
         "项目交接",
         "partial",
         "README、ADR、运行手册和证据审计",
@@ -233,7 +237,7 @@ MILESTONES = (
         ("python -m capstone.evidence_audit",),
     ),
     Milestone(
-        76,
+        "m7-capacity-feedback-recovery/step6",
         "简历证据",
         "integrated",
         "只引用仓库和报告能证明的事实",
@@ -244,7 +248,7 @@ MILESTONES = (
         ("python -m capstone.interview_evidence --strict-evidence",),
     ),
     Milestone(
-        77,
+        "m8-evidence-final-frontend/step1",
         "技术讲解",
         "integrated",
         "RAG、Agent、工程问答和项目 pitch",
@@ -253,37 +257,26 @@ MILESTONES = (
             "capstone/docs/portfolio/enterprise_interview.md",
             "capstone/docs/portfolio/project_pitch.md",
         ),
-        ("python -m capstone.milestones 77",),
+        ("python -m capstone.milestones m8-evidence-final-frontend/step1",),
     ),
     Milestone(
-        78,
+        "m8-evidence-final-frontend/step2",
         "最终验收",
         "integrated",
         "模拟面试、复盘和下一版本路线",
         ("capstone/docs/portfolio/final_review.md",),
-        ("python -m capstone.milestones 78",),
+        ("python -m capstone.milestones m8-evidence-final-frontend/step2",),
     ),
 )
 
-DAILY_FILES = {
-    path.name.split("_", 1)[0]: path.name
-    for path in ROOT.glob("day*.py")
-    if path.name[:5].removeprefix("day").isdigit()
-    and 51 <= int(path.name[3:5]) <= 78
-}
-for _day in range(51, 79):
-    if (ROOT / f"day{_day}" / "README.md").is_file():
-        DAILY_FILES[f"day{_day}"] = f"day{_day}/README.md"
-
 
 def _status(milestone: Milestone) -> dict[str, object]:
-    task_file = DAILY_FILES.get(f"day{milestone.day}", "")
+    task_file = "flagship-project/" + milestone.step + "/README.md"
     evidence_paths = ((task_file,) if task_file else ()) + milestone.evidence
-    evidence = {
-        path: (ROOT / path.rstrip("/")).exists() for path in evidence_paths
-    }
+    evidence = {path: (ROOT / path.rstrip("/")).exists() for path in evidence_paths}
     return {
         **asdict(milestone),
+        "label": step_label(milestone.step),
         "task_file": task_file,
         "evidence_status": evidence,
     }
@@ -291,19 +284,34 @@ def _status(milestone: Milestone) -> dict[str, object]:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("day", nargs="?", type=int)
+    parser.add_argument(
+        "target",
+        nargs="?",
+        help="例如 m3-order-tool-reliability/step2 或 m3-order-tool-reliability",
+    )
     parser.add_argument("--json", action="store_true")
     parser.add_argument("--strict-evidence", action="store_true")
     args = parser.parse_args(argv)
-    selected = [item for item in MILESTONES if args.day in {None, item.day}]
+    selected = [
+        item
+        for item in MILESTONES
+        if args.target is None
+        or item.step == args.target
+        or item.step.split("/")[0] == args.target
+    ]
     if not selected:
-        parser.error("day 必须在 51-78")
+        parser.error("请选择旗舰项目中存在的后端里程碑/步骤（step3 前端见章节总地图）")
     payload = [_status(item) for item in selected]
     if args.json:
         print(json.dumps(payload, ensure_ascii=False, indent=2))
     else:
+        print(
+            "以下为教学步骤与历史 capstone 能力记录的对照；文件存在不代表运行验收通过。"
+        )
         for item, status in zip(selected, payload):
-            print(f"Day{item.day} [{item.status}] {item.title}")
+            print(
+                f"{step_label(item.step)} | capstone 能力 [{item.status}] {item.title}"
+            )
             print(f"  项目事件：{item.story}")
             print("  验收：" + "；".join(item.acceptance))
             for path, exists in status["evidence_status"].items():

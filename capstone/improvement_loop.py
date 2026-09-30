@@ -13,7 +13,7 @@ import argparse
 import time
 from pathlib import Path
 
-from _capstone_driver import (
+from .driver import (
     DEFAULT_TIMEOUT_SECONDS,
     DriverError,
     cli_error,

@@ -1,7 +1,7 @@
 """
-capstone/test_regression.py · pytest 回归（护城河：测试主场）
+capstone/test_regression.py · pytest 回归
 ==========================================================
-整合 day42：把评测集变成 pytest 用例，每次改完 RAG 一条命令跑回归。
+整合 章节 5.8：把评测集变成 pytest 用例，每次改完 RAG 一条命令跑回归。
 RAG 输出有随机性，用宽松断言（含关键词 / 是否拒答），并靠 temperature=0 提升可复现。
 运行：pytest capstone/test_regression.py -v
 ==========================================================

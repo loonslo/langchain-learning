@@ -1,13 +1,17 @@
 """
-公共配置与工厂（Day11+ 共用）
+公共配置与工厂（各章节共用）
 ==========================================================
-测试工程师转 AI 应用开发
+集中管理各章节都要用的配置：共享资料路径、本地模型路径、LLM 工厂、中文分隔符。
+换机器、换模型、换密钥只改这一处或 .env，不必逐个修改章节脚本。
 
-把各 day 文件里重复的硬编码集中到这里：模型路径、LLM 初始化、中文分隔符。
-换机器 / 换模型 / 换 key 只改这一处，不用动十几个文件。
+初学者只需先认识四个名字（第 2 篇起会用到）：
+- SAMPLE_DOC       多章共用的短示例文档（RAG 与评测的问答都基于它）
+- LONG_DOC         长文章，用来观察切分、混合检索的效果
+- get_embeddings() 本地中文 embedding 模型
+- get_llm()        聊天模型；temperature 默认 0，评测结果才可复现
+- ZH_SEPARATORS    中文文本切分用的分隔符
 
-为什么抽出来：
-- 评测要可复现：LLM 默认 temperature=0 统一在工厂里设好，不靠每个文件各记一遍。
+其余（provider 校验、可靠性包装、按问题选模型）在第 4–5 篇之后才需要读。
 ==========================================================
 """
 
@@ -27,14 +31,19 @@ _DOTENV_DEEPSEEK_API_KEY = (
 _PROCESS_DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 load_dotenv(_DOTENV_PATH)
 
-# ---- 模型路径：优先读环境变量，没配就用默认本地路径（换机器改 .env 即可）----
+# ---- 共享资料：多章共用的示例文档和评测集放在 chapters/shared-data/ ----
+SHARED_DATA_DIR = Path(__file__).resolve().parent / "chapters" / "shared-data"
+SAMPLE_DOC = SHARED_DATA_DIR / "test_doc.txt"      # 短文档：评测集的问题和标准答案都基于它
+LONG_DOC = SHARED_DATA_DIR / "long_article.txt"    # 长文章：文档够长，切分策略的差异才看得出来
+
+# ---- 模型路径：优先读环境变量；没配就用 ModelScope 的默认缓存目录 ----
+# 下载方法见根目录 README“准备本地 embedding 模型”；换机器时在 .env 里设置 EMBED_MODEL_PATH 即可。
+_MODELSCOPE_HUB = Path.home() / ".cache" / "modelscope" / "hub" / "models" / "BAAI"
 EMBED_MODEL_PATH = os.getenv(
-    "EMBED_MODEL_PATH",
-    r"C:\Users\so\.cache\modelscope\hub\models\BAAI\bge-small-zh-v1___5",
+    "EMBED_MODEL_PATH", str(_MODELSCOPE_HUB / "bge-small-zh-v1___5")
 )
 RERANKER_MODEL_PATH = os.getenv(
-    "RERANKER_MODEL_PATH",
-    r"C:\Users\so\.cache\modelscope\hub\models\BAAI\bge-reranker-base",
+    "RERANKER_MODEL_PATH", str(_MODELSCOPE_HUB / "bge-reranker-base")
 )
 
 # 中文友好的递归切割分隔符：段落 > 换行 > 句号 > 逗号 > 空格 > 逐字兜底
@@ -264,7 +273,7 @@ def get_reliable_llm(temperature: float = 0.0, model: str | None = None,
                       backup_model: str | None = None, timeout: int = 20, **kwargs):
     """生产用 LLM 工厂：timeout + 指数退避重试（+ 可选主备 fallback）。
 
-    这是 day42（可靠性）落地的地方——不是 demo，是全项目对外问答链路
+    这是服务可靠性策略落地的地方——不是 demo，是全项目对外问答链路
     真正在用的入口。capstone/knowledge_base.py 的 chain()、
     capstone/permissions.py 的 permission_chain() 都调用它。
 

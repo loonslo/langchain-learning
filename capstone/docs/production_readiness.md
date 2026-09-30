@@ -1,4 +1,4 @@
-# Production Readiness Review（Day74）
+# Production Readiness Review（里程碑 7.7 / step4）
 
 评审结论只能是 `GO`、`CONDITIONAL GO` 或 `NO-GO`，每项必须链接证据。
 

@@ -57,7 +57,7 @@ def audit_repository() -> list[Check]:
         "capstone/approval.py",
         "capstone/load_test.py",
         "capstone/docs/project_brief.md",
-        "capstone/docs/day51-78-roadmap.md",
+        "capstone/docs/project-roadmap.md",
         "capstone/docs/production_readiness.md",
         ".github/workflows/eval-gate.yml",
     )

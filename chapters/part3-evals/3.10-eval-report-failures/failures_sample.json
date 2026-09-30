@@ -1,0 +1,79 @@
+[
+  {
+    "case_id": "s01",
+    "type": "rag_fact",
+    "passed": false,
+    "refusal_ok": false,
+    "keyword_score": 0.0,
+    "citation_score": 0.0,
+    "question": "LangGraph 是谁推出的？",
+    "reference": "LangChain 团队",
+    "answer": "文档中没有提到。"
+  },
+  {
+    "case_id": "s02",
+    "type": "rag_fact",
+    "passed": false,
+    "refusal_ok": true,
+    "keyword_score": 1.0,
+    "citation_score": 0.0,
+    "question": "RAG 的全称是什么？",
+    "reference": "检索增强生成",
+    "answer": "RAG 的全称是检索增强生成。"
+  },
+  {
+    "case_id": "s03",
+    "type": "rag_cross_doc",
+    "passed": false,
+    "refusal_ok": true,
+    "keyword_score": 0.33,
+    "citation_score": 1.0,
+    "question": "一个 RAG 系统回答问题大致经过哪几步？",
+    "reference": "先检索相关文档片段，再让模型基于片段生成回答",
+    "answer": "先检索，然后回答。【来源：test_doc.txt】"
+  },
+  {
+    "case_id": "s04",
+    "type": "refusal",
+    "passed": false,
+    "refusal_ok": false,
+    "keyword_score": 1.0,
+    "citation_score": 1.0,
+    "question": "LangChain 是哪一年发布的？",
+    "reference": "文档未提及，应拒答",
+    "answer": "LangChain 于 2022 年发布。【来源：test_doc.txt】"
+  },
+  {
+    "case_id": "s05",
+    "type": "citation",
+    "passed": false,
+    "refusal_ok": true,
+    "keyword_score": 1.0,
+    "citation_score": 0.0,
+    "question": "关于向量数据库的说明出自文档哪部分？",
+    "reference": "出自讲向量数据库的段落",
+    "answer": "出自介绍 FAISS、Chroma、Pinecone 的那一段。"
+  },
+  {
+    "case_id": "s06",
+    "type": "rag_fact",
+    "passed": false,
+    "refusal_ok": true,
+    "keyword_score": 1.0,
+    "citation_score": 1.0,
+    "question": "常见的向量数据库有哪些？",
+    "reference": "FAISS、Chroma、Pinecone",
+    "answer": "常见的有 FAISS、Chroma、Pinecone，其中 Pinecone 的月费约 70 美元。【来源：test_doc.txt】"
+  },
+  {
+    "case_id": "s07",
+    "type": "rag_fact",
+    "passed": true,
+    "refusal_ok": true,
+    "keyword_score": 1.0,
+    "citation_score": 1.0,
+    "question": "LangChain 是什么？",
+    "reference": "用于开发大语言模型应用的框架",
+    "answer": "LangChain 是用于开发大语言模型应用的框架。【来源：test_doc.txt】"
+  }
+]

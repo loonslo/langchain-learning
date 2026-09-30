@@ -1,4 +1,4 @@
-# 真部署：拿一个能点的公网地址（Day60）
+# 真部署：拿一个能点的公网地址（里程碑 7.3 / step4）
 
 > `docker run` 在本机起来 ≠ 上线。上线 = 有一个手机能打开的公网 URL。这份是把毕业项目部署出去的最小路径。**线上这一版用可公开语料**（自己写的 / 开源年报），真实脏数据只在本地跑——这是合规边界。
 
@@ -6,7 +6,7 @@
 
 - [ ] `.env` 里的 key 走环境变量注入，**不进镜像、不进仓库**。
 - [ ] 线上知识库目录换成可公开语料。
-- [ ] 接口在 `/v1` 下，OpenAPI 文档 `/docs` 能打开（Day66）。
+- [ ] 接口在 `/v1` 下，OpenAPI 文档 `/docs` 能打开（里程碑 7.5 / step2）。
 - [ ] 存活检查 `/live` 返回 200，依赖检查 `/ready` 返回 `ready`。
 - [ ] 生产环境已配置外部内容安全服务；审核服务不可用时请求会按 fail-closed 拒绝。
 
@@ -31,7 +31,7 @@ docker run --rm -p 8000:8000 --env-file .env \
 | 云主机（轻量服务器） | 自己装 Docker，最自由 | 想完整掌控 / 已有机器 |
 
 ### Render 最小步骤
-1. 仓库根放 `Dockerfile`（从 `Dockerfile.example` 改 CMD）。
+1. 直接使用仓库根的 `Dockerfile`：镜像里用 `uvicorn capstone.api_enterprise:app` 启动，不需要改 CMD。
 2. Render 新建 Web Service，连这个 repo。
 3. 在平台密钥管理中配置 `JWT_SECRET`、`REDIS_URL`、`CONTENT_SAFETY_URL`、模型地址/密钥和 embedding 路径。
 4. 挂载持久卷到 `/var/lib/capstone`；需要数据查询或动作审批时，再显式启用对应 feature flag。

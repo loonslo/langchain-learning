@@ -1,0 +1,7 @@
+[
+  {"id":"refund","question":"退款多久到账？","topics":["退款"],"expected_chunks":["refund-1"],"keywords":["3个工作日"],"should_refuse":false},
+  {"id":"shipping","question":"多久发货？","topics":["发货"],"expected_chunks":["shipping-1"],"keywords":["48小时"],"should_refuse":false},
+  {"id":"cross-source","question":"退款和发货分别多久？","topics":["退款","发货"],"expected_chunks":["refund-1","shipping-1"],"keywords":["3个工作日","48小时"],"should_refuse":false},
+  {"id":"out-of-scope","question":"请预测明天股价。","topics":["股价"],"expected_chunks":[],"keywords":[],"should_refuse":true},
+  {"id":"empty","question":"   ","topics":[],"expected_chunks":[],"keywords":[],"should_refuse":true}
+]

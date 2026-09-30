@@ -1,15 +1,9 @@
-# LangChain 学习项目（主项目）
+# LangChain 学习项目
 
-**目标**：测试工程师 → AI Agent 应用开发，2~3 个月内完成并跳槽。
+**目标**：从测试工程转向 AI 应用开发，重点学习可评测、可维护的 RAG、Agent 与企业应用。
 
-**结构**：Day1-71 每日一个自包含 Python 文件 + capstone 毕业项目。
-- Day1-6 基础（chat/结构化输出/memory/tool calling）
-- Day7-17 RAG（加载切分、混合检索、rerank、Chroma 持久化）
-- Day18-26 评估（LLM judge、ragas、回归曲线、A/B、失败分析）← 护城河
-- Day28-40 LangGraph / Agent（ReAct、plan-execute、HITL、text2SQL、MCP）
-- Day41+ 工程化（FastAPI、可靠性、Docker、CI）
-- capstone：企业知识库 Agent + 评估平台（认证、多租户、监控、增量同步）
+**当前结构**：`chapters/` 按课程章节组织独立练习；`flagship-project/` 保存同一客服 Copilot 的阶段教程；`capstone/` 保存整合实现。内容存在、离线测试通过和真实环境验收是不同状态。
 
-**判断标准**（来自项目指令）：只保留高效、以转行为第一性目标的代码和任务；去掉无关低效的部分。
+**核心方向**：模型调用与上下文、RAG 与引用、评测与失败诊断、LangGraph 与 Agent、服务可靠性、身份与多租户、MCP/A2A。
 
-**关键命令**：见 CLAUDE.md。测试用 pytest，评估平台默认离线可跑。
+**项目约定**：优先检查当前 README、章节说明、TASKS 和验收记录。测试默认使用 pytest，外部模型调用需确认密钥与数据范围。

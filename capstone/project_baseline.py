@@ -18,18 +18,18 @@ ROOT = Path(__file__).resolve().parent.parent
 REQUIRED_ARTIFACTS = (
     "capstone/docs/project_brief.md",
     "capstone/docs/adr/001-modular-monolith.md",
-    "capstone/docs/day51-78-roadmap.md",
+    "capstone/docs/project-roadmap.md",
     "capstone/docs/acceptance_matrix.md",
     "capstone/contracts.py",
-    "capstone/daily_task.py",
+    "capstone/project_task.py",
     "capstone/service.py",
     "capstone/api_enterprise.py",
     "capstone/evaluation.py",
     "capstone/test_production.py",
-    "day51/README.md",
-    "day51/src/customer_support/assistant.py",
-    "day51/data/knowledge/customer_faq.md",
-    "day51/tests/test_assistant.py",
+    "flagship-project/m1-rag-mvp/step1/README.md",
+    "flagship-project/m1-rag-mvp/step1/src/customer_support/assistant.py",
+    "flagship-project/m1-rag-mvp/step1/data/knowledge/customer_faq.md",
+    "flagship-project/m1-rag-mvp/step1/tests/test_assistant.py",
 )
 
 GIT_WORKFLOW = """
@@ -59,7 +59,7 @@ def _walking_skeleton_check() -> Check:
     """不调用模型，证明 API/CLI/评测可复用的业务契约能够贯通。"""
 
     class FakeKnowledgeBase:
-        version = "day51-v1"
+        version = "support-rag-v1"
 
         def answer_with_usage(self, question, **_kwargs):
             return AnswerResult(
@@ -81,7 +81,7 @@ def _walking_skeleton_check() -> Check:
     result = service.assist(
         AssistRequest(
             question="退款规则是什么？",
-            request_id="day51-smoke",
+            request_id="support-rag-smoke",
             mode="knowledge",
         ),
         User("learner", tenant_id="acme", roles=frozenset({"employee"})),
@@ -119,14 +119,14 @@ def main(argv: list[str] | None = None) -> int:
             )
         )
     else:
-        print("===== Day51 项目基线 =====")
+        print("===== 里程碑 7.1 / step1 项目基线 =====")
         for check in checks:
             print(
                 f"[{'PASS' if check.passed else 'FAIL'}] {check.name}: {check.detail}"
             )
         print("\n===== 协作与变更边界 =====")
         print(GIT_WORKFLOW)
-        print("课程主线：capstone/docs/day51-78-roadmap.md")
+        print("课程主线：capstone/docs/project-roadmap.md")
     return 1 if any(not check.passed for check in checks) else 0
 
 

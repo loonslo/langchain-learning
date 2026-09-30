@@ -1,0 +1,31 @@
+# 里程碑 7.7 / step5 工作簿 · 备份与恢复验证
+
+## 0. 先确认本步变更闭环
+
+| 文件 | 状态 | 它接到哪个旧文件/入口 | 如果不接会发生什么 |
+|---|---|---|---|
+| `src/customer_support/backup.py` | 新增 | 待填写 | 待填写 |
+| `tests/test_backup.py` | 新增 | 待填写 | 待填写 |
+| `tests/test_thread_backup.py` | 新增 | 待填写 | 待填写 |
+| `src/customer_support/runtime.py` | 修改旧文件 | 待填写 | 待填写 |
+| `src/customer_support/thread_store.py` | 修改旧文件 | 待填写 | 待填写 |
+
+真实链路：`正式 thread_db_path → SQLiteThreadStore.backup_to → integrity_check`
+
+## 1. 从 里程碑 7.7 / step4 继续
+
+1. 前一步暴露的真实问题是什么？有备份文件不代表能恢复（请用自己的话重写）
+2. 本节哪些旧文件被修改？为什么只新增模块还不够？待填写。
+3. 哪些继承文件虽然未改，却仍参与本节的调用链？待填写。
+
+## 2. 运行与证据
+
+1. 哪条测试证明新能力已从正式入口可达？待填写。
+2. 哪条测试保护失败、安全或隔离边界？待填写。
+3. 运行 `tools/materialize.py flagship m7-capacity-feedback-recovery/step5`，记录累计测试数量和结果：待填写。
+4. 暂时断开一个集成点，观察哪条测试失败，然后恢复：待填写。
+
+## 3. 本节结论
+
+1. 本节仍不能证明什么？本地 SQLite 演练不等于云数据库灾备（补充你的判断）
+2. 用 60 秒说明：旧问题 → 新增能力 → 修改旧文件 → 调用链 → 测试证据 → 边界。

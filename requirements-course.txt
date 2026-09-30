@@ -1,0 +1,32 @@
+# 课程依赖（第 0–6 篇）：在锁定依赖之上，补充各章脚本直接导入但锁定文件没有的包。
+# 安装：python -m pip install -r requirements-course.txt
+# 检查：python tools/run_chapter.py 0.1
+#
+# 锁定文件 requirements.txt 已包含 langchain、pypdf、langgraph、fastapi 等；
+# 下面的包没有锁定版本，确认各章能跑通后，可把 pip freeze 的结果回写到此处。
+-r requirements-dev.txt
+
+# 第 1、4 篇：MCP
+mcp
+langchain-mcp-adapters
+
+# 第 2–3 篇：向量检索
+faiss-cpu
+docx2txt          # 2.1 读取 .docx（可选）
+
+# 第 5 篇：这些包多数已作为间接依赖安装，此处显式列出以便核对
+openai
+tenacity
+numpy
+
+# 以下按章节选装
+# ragas             # 3.5 Ragas 评测
+# datasets          # 3.5、6.2
+# langsmith         # 3.6–3.8 追踪与实验
+# deepeval          # 3.10 失败诊断（二级复核）
+# langmem           # 4.10 长期记忆
+# tavily-python     # 4.12 联网搜索，需要 TAVILY_API_KEY
+# ollama            # 5.6 本地推理，需要本机运行 Ollama
+# torch             # 6.2 LoRA 微调，需要 GPU 或较长运行时间
+# transformers
+# peft

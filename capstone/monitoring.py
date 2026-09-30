@@ -66,6 +66,7 @@ def record(
 
 
 def _percentile(values: list[float], percentile: int) -> float:
+    """线性插值分位数（与 numpy 默认一致），保留 1 位小数；没有样本时返回 0.0。小样本下比 nearest-rank 略乐观。"""
     if not values:
         return 0.0
     ordered = sorted(values)

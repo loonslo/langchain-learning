@@ -24,3 +24,23 @@ capstone/data/tenants/
 capstone/data/eval_report.md
 capstone/data/failures.json
 capstone/data/metrics.db*
+
+# 章节脚本运行时生成的文件（可随时重新生成）
+chapters/shared-data/eval_set.json
+chapters/shared-data/eval_set_full.json
+chapters/shared-data/failures.json
+chapters/**/chroma_db/
+chapters/**/reports/
+chapters/**/eval_set_from_prod.json
+chapters/**/routing_labels.json
+chapters/**/*.log.jsonl
+chapters/**/Dockerfile.example
+chapters/**/.dockerignore.example
+
+# 构建产物与其他工具的运行目录（可重新生成，不入库）
+pdf-course/out/
+面试题/**/自检/
+面试题/**/report.html
+面试题/**/_正文.txt
+.workbuddy/
+.workbuddy-ai/
