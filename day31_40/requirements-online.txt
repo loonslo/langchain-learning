@@ -1,8 +1,0 @@
-# Day31-Day40 完整在线运行依赖（基础 requirements.txt 之外）
-tavily-python
-mcp
-langchain-mcp-adapters
-langgraph-checkpoint-sqlite
-
-# 多实例生产持久化时再安装：
-# langgraph-checkpoint-postgres
