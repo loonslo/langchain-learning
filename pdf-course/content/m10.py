@@ -186,7 +186,7 @@ def chapter():
                "MCP 工具鉴权与写操作审批、A2A 任务模型与幂等、"
                "HTTP 协议边界、跨 Agent 委托与失败出口。"
                "代码位置：" + C("chapters/part10-mcp-a2a-optional/10.1-10.4")
-               + " 的 " + C("enterprise-support/") + "。"))
+               + "，由 " + C("tools/materialize.py") + " 还原后运行。"))
     p.append(RUN([
         ("代码位置", C(".build/enterprise/<chapter>/enterprise-support/")
                       + "，由 " + C("tools/materialize.py enterprise <chapter>") + " 还原"),

@@ -134,14 +134,23 @@ _FIGN = {"n": 0}
 def FIG(svg, title, src=None):
     """插图。title 写结论不写主题；src 是数据源行。
 
-    编号不再写成「图 N」大字标题——改成右上角的小圆圈数字，图题用小字排在图下方。
+    编号是右上角的空心小圆数字，只作检索锚点。
+    纵横比高的图（纵向流程链等）在 76mm 封顶下会缩成「邮票」——
+    按 viewBox 自动加 .fig-tall，封顶放宽到 150mm（阈值 0.62 实测覆盖
+    序章 5 层递进图 ratio≈0.69，不误伤普通横图和图表）。
     """
     _FIGN["n"] += 1
     n = _FIGN["n"]
+    tall = ""
+    m = re.search(r'viewBox="0 0 ([\d.]+) ([\d.]+)"', svg)
+    if m:
+        vw, vh = float(m.group(1)), float(m.group(2))
+        if vw and vh / vw >= 0.62:
+            tall = " fig-tall"
     num = f'<span class="fignum">{n}</span>'
     cap = f'<div class="figtitle">{title}</div>'
     s = f'<div class="src">{src}</div>' if src else ""
-    return (f'<figure class="fig" data-fig="{n}">{num}'
+    return (f'<figure class="fig{tall}" data-fig="{n}">{num}'
             f'<div class="figbody">{svg}</div>{cap}{s}</figure>')
 
 

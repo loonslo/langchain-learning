@@ -16,6 +16,8 @@
 
 ## Done
 
+- [x] **PDF 书稿重建并定版 v1.0（2026-09-30）** - 把当日课程审查的修订同步进书稿：封面补版本号并改正配套代码说明；环境准备改为 `requirements-course.txt` + `python tools/run_chapter.py 0.1` 自检；代码地图去掉 `dayNN` 与已删除的 `customer_support/`；6 章改为 `flagship-project/` + `capstone/` 分别验收；7.7 端到端按 8.7 实际行为改写（当前不用流式、解析器不查结尾）；8 章还原脚本改为 `tools/materialize.py`。重建后 100 页、120 张图，机械与几何自检通过，书签 97 条。只做了构建与文本层核对，未做逐页目视检查；命令与边界见 `docs/course-book-v1-validation.md`
+
 - [x] **清理与两项遗留修复（2026-09-30）** - 删除两个旧虚拟环境（约 1.2 GB）、`debug_weather.py`、根目录三个示例文件、`artifacts/`、整个 `archive/` 和 `reports/` 的历史输出（备份在 `.tmp/deleted-backup-20260930/`），`_capstone_driver.py` 移入 `capstone/driver.py`；修复真实模型拒答仍附引用（`capstone/knowledge_base.py` 的 `is_refusal`：真实回答是“文档中没有提到。”，旧判断只认无标点的原句），真实模型回归 6 passed；旗舰 m1/step4 关键词一路加证据门槛，m1/step1、m2/step2、m5/step1 拒答时不附来源。离线测试 201 项通过，另有一次 capstone 真实模型回归 6 项通过；未运行远端服务和浏览器。证据：`docs/course-review-validation.md`
 
 - [x] **课程全面审查与订正（2026-09-30）** - 按精简、层次、衔接、初学者视角、订正、注释、文字七项要求审查：修复共用资料与评测集断链，补依赖清单和环境自检；82 个章节与 29 个项目步骤 README 去除重复模板并改写与代码不符的说明；订正 8.7–8.10、9.1–9.7、10.2–10.4、7.7 / step2 中的实际缺陷；补充语义型注释。3.7、3.10 的示例资产已随此项补齐（3.7 读共用评测集，3.10 自带合成样本）。证据：`docs/course-review-validation.md`

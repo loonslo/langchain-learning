@@ -26,9 +26,11 @@ def chapter():
         "中间那一层，就是把对话变成业务契约的地方"))
 
     p.append(SIDE("一个重要的交代：代码换了新项目",
-                  P("这一段的实现代码换到了" + C("enterprise_support")
-                    + "（由 " + C("tools/materialize_enterprise_day.py") + " 还原）。"
-                    "它不是第 6 章那个 " + C("customer_support") + " 的延续，"
+                  P("这一段的实现代码在 "
+                    + C("chapters/part9-enterprise-infra-optional/9.1-9.4") + "，"
+                    "运行前由 " + C("tools/materialize.py enterprise <chapter>")
+                    + " 还原成完整快照。"
+                    "它不是第 6 章那个旗舰项目的延续，"
                     "而是一条" + E("新的产品线") + "。"),
                   P("为什么要另起：第 6 章的产品重点是「知识问答 + 工具 + 安全边界」，"
                     "这一段重点是「对话如何驱动业务状态」。"
@@ -174,7 +176,7 @@ def chapter():
                "意图枚举、槽位抽取与跨轮追问、稳定 JSON 输出、"
                "可恢复的显式工作流。代码位置："
                + C("chapters/part9-enterprise-infra-optional/9.1-9.4")
-               + " 的 " + C("enterprise-support/") + "。"))
+               + "，由 " + C("tools/materialize.py") + " 还原后运行。"))
     p.append(RUN([
         ("代码位置", C(".build/enterprise/<chapter>/enterprise-support/") + "，由 "
                       + C("tools/materialize.py enterprise <chapter>") + " 还原"),

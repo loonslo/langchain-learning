@@ -29,13 +29,13 @@ def chapter():
 
     p.append(SIDE("先交代代码结构，否则你会找不到代码",
               P("这一章的代码分两处："
-                + C("customer_support/") + " 是可运行的产品，"
-                + C("capstone/") + " 是同一产品的另一套组织方式。"),
-              P("两个目录在部分环节上存在" + E("版本漂移") + "——"
-                "同一件事在两处的做法并不完全一致。"
-                "本书以两处各自的 " + E("README 为准") + "，因为它是最后更新的；"
-                    "运行方式也写在 " + C("customer_support/") + " 和 "
-                    + C("capstone/") + " 各自的 README 里。")))
+                + C("flagship-project/") + " 是按里程碑推进的阶段教程"
+                "（8 个里程碑、29 个步骤），"
+                + C("capstone/") + " 是同一业务的能力整合实现，两处分别验收。"),
+              P("阶段教程每步目录只存新增和修改的文件：先读该步 README，"
+                "再用 " + C("tools/materialize.py") + " 还原成完整快照，"
+                "跑累计测试确认没破坏前一步。"
+                "两处的能力边界与真实验收情况，以各自 README 为准。")))
 
     # ── 6.1 ──
     p.append(H3("6.1　把产品立起来"))
@@ -238,15 +238,15 @@ def chapter():
                "并且有前端界面。代码位置：" + C("flagship-project/") + " 与 "
                + C("capstone/") + "。"))
     p.append(RUN([
-        ("代码位置", C("flagship-project/") + "（阶段教程）和 " + C("capstone/")
-                      + "（整合实现）；前端见里程碑 7.8"),
+        ("代码位置", C("flagship-project/") + "（阶段教程，前端见 里程碑 7.8 / step3）"
+                      + "和 " + C("capstone/") + "（整合实现）"),
         ("工作目录", "按项目 README 启动后端与前端"),
         ("额外依赖", "服务化那几节需要 FastAPI；前端需要 " + C("npm install")),
-        ("执行命令", "见 " + C("customer_support/README.md") + "；前端 "
+        ("执行命令", "还原与运行见 " + C("flagship-project/README.md") + "；前端 "
                       + C("npm run dev") + "，地址 " + C("http://127.0.0.1:5173")),
         ("预期输出", "能基于知识回答、能查订单、答不上来建工单；浏览器里能演示"),
-        ("常见失败", C("customer_support/") + " 和 " + C("capstone/")
-                      + " 有版本漂移，以各自 README 为准；数据库文件没初始化"),
+        ("常见失败", C("flagship-project/") + " 和 " + C("capstone/")
+                      + " 是两套实现，结论别混用；数据库文件没初始化"),
         ("完成证据", "用 A 租户的身份去请求 B 租户的数据，被拒绝"),
     ]))
     p.append(TASK("找一处「调用方自报身份」的写法——比如从请求正文里读 "

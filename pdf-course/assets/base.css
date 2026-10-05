@@ -24,13 +24,23 @@
   --accent:#a4551f;   /* 语义负向/第二强调 */
   --paper: #ffffff;   /* 纸色。暖纸本方向换 #faf7f2 */
 
-  /* 中文字号基线（A4 竖版）。科普/书型按 科普.md 调到 10.5pt / 1.80。 */
-  --fs-body: 10.5pt;  --lh-body: 1.80;
-  --fs-table: 9pt;    --lh-table: 1.55;
-  --fs-caption: 7.8pt;--lh-caption: 1.5;   /* 图注/数据源，下限 7.2pt */
-  --fs-h2: 25pt;      /* 章标题 */
-  --fs-h3: 15pt;      /* 节/页标题，与正文至少 1.3 倍 */
-  --fs-figtitle: 11pt;
+  /* 六级字阶：全书只允许这 6 个字号，任何组件不许另设字号。
+     T1 细注（页眉/图编号/图注来源） T2 辅文（表格/代码/侧栏/目录二级）
+     T3 正文  T4 节标题/引导  T5 章标题  T6 封面·幕间大标题 */
+  --t1: 7.5pt;
+  --t2: 9pt;
+  --t3: 10.5pt;
+  --t4: 14pt;
+  --t5: 25pt;
+  --t6: 40pt;
+
+  /* 中文字号基线（A4 竖版）——全部挂到六级字阶上 */
+  --fs-body: var(--t3);  --lh-body: 1.80;
+  --fs-table: var(--t2);    --lh-table: 1.55;
+  --fs-caption: var(--t1); --lh-caption: 1.5;
+  --fs-h2: var(--t5);
+  --fs-h3: var(--t4);
+  --fs-figtitle: var(--t2);
 
   /* Windows 中文字体栈（见 huashu-report-windows 第二节）。
      'Songti SC' 是 macOS 独有，Windows 会静默回退到黑体——所以补 STSong / SimSun。
@@ -65,7 +75,7 @@ table.pagewrap { width: 100%; border-collapse: collapse;
                  page-break-after: always; table-layout: auto; }
 table.pagewrap > thead { display: table-header-group; }
 table.pagewrap > thead .crumb {
-  font-size: 6.8pt; color: var(--mute); letter-spacing: .04em;
+  font-size: var(--t1); color: var(--mute); letter-spacing: .04em;
   padding-bottom: 3mm; border-bottom: .4pt solid var(--rule-soft);
 }
 

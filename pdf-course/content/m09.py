@@ -275,7 +275,7 @@ def chapter():
                "PostgreSQL（含 RLS）、Redis、Qdrant、Compose 编排、"
                "统一 Provider 契约、vLLM 服务与推理基准。"
                "代码位置：" + C("chapters/part9-enterprise-infra-optional/9.5-9.12")
-               + " 的 " + C("enterprise-support/") + "。"))
+               + "，由 " + C("tools/materialize.py") + " 还原后运行。"))
     p.append(RUN([
         ("代码位置", C(".build/enterprise/<chapter>/enterprise-support/")
                       + "，由 " + C("tools/materialize.py enterprise <chapter>") + " 还原"),
