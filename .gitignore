@@ -36,6 +36,7 @@ chapters/**/routing_labels.json
 chapters/**/*.log.jsonl
 chapters/**/Dockerfile.example
 chapters/**/.dockerignore.example
+chapters/**/gate/gate_report.json
 
 # 构建产物与其他工具的运行目录（可重新生成，不入库）
 pdf-course/out/

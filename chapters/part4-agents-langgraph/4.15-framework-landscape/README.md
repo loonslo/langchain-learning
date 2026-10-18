@@ -3,6 +3,7 @@
 [全书目录](../../README.md) · [上一章 4.14](../4.14-supervisor-fanout/README.md) · [下一章 5.1](../../part5-production/5.1-serve-fastapi/README.md)
 
 - **目标**：学完 ReAct、状态图和 Supervisor 之后，能根据业务约束选择编排层，而不是按名字的流行程度。
+- **v2 路径**：L4.1 / 核心阅读（清单验收）
 - **前置**：4.1–4.14。
 - **环境**：无代码，以文字和选型工作簿为主。
 

@@ -1,41 +1,107 @@
-# 1.3 结构化输出：让程序读懂模型的回答
+# L1.3 结构化输出 · Gate（原 1.3）
 
 [全书目录](../../README.md) · [上一章 1.2](../1.2-control-output/README.md) · [下一章 1.4](../1.4-context-memory/README.md)
 
-- **目标**：让模型按 Pydantic 定义的结构返回数据，程序直接取字段使用。
-- **前置**：1.1。
-- **环境**：调用真实模型。
-- **命令**：`python tools/run_chapter.py 1.3`
+- **能力**：把模型输出解析成带字段的数据；校验类型与业务范围；失败时只修复一次。
+- **v2 路径**：L1.3 / 核心（Gate；结构化输出）
+- **前置**：1.1（一次调用）。
+- **时间盒**：5 小时（1h 读 + 3h 实现 + 1h 故障分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `structured_output.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part1-foundations/1.3-structured-output/gate/gate_check.py
+```
 
-前两章模型返回的是一段话，人能读，程序不好用：要取评分、判断情感、写入数据库，都得先从文字里抠信息。让模型直接返回带字段的对象，就能 `result.score` 取值、做断言，这也是后面自动评测的前提。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **Pydantic 模型**：用一个 `BaseModel` 类声明字段名和类型。`Field(description=...)` 的说明会传给模型，相当于告诉它每个字段该填什么。
-- **`with_structured_output`**：把模型类交给 LLM，得到的链直接产出该类的对象（不是字典，用 `.score` 取值）。底层通过 function calling 约束输出，比“要求模型输出 JSON，再自己解析”更稳。
-- **类型只约束格式**：字段齐全、类型正确，不代表内容正确。评分是否合理、情感判断是否对，仍要另行验证。
+“让模型输出 JSON”在 demo 里很顺，在生产里会遇到：
 
-## 流程
+- 模型在 JSON 外面加解释文字，或者用 Markdown 围栏；
+- 字段少一个、类型不对（分数变成字符串、`true` 当整数）；
+- 分数越界、问题列表里混入非字符串；
+- 解析失败后无限重试，成本失控。
 
-1. 定义 `CodeReview`（总结、问题列表、评分）。
-2. 用 `llm.with_structured_output(CodeReview, method="function_calling")` 得到结构化模型，接进 `prompt | structured_llm`。
-3. 调用后直接读取 `.summary`、`.issues`、`.score`。
-4. 换成 `SentimentResult` 结构，批量分析三条文本，观察每条的情感、置信度和关键词。
+这个 gate 让你把结构化输出做成 **解析 → 校验 → 一次修复 → 明确失败**，而不是 `json.loads` 一把梭。
 
-## 代码导读
+## 任务
 
-[structured_output.py](structured_output.py)：先看 `CodeReview` 类和 `Field` 说明，再看 `with_structured_output` 之后的调用与取值。第二个例子是同一模式换字段，重点比较字段说明怎样影响模型填值。
+实现 `gate/starter.py` 的两个函数：
 
-## 练习
+| 函数 | 你要交付的行为 |
+|---|---|
+| `parse_model_json` | 解析纯 JSON/围栏/带说明文字；按 schema 校验字段与类型；失败只修复一次 |
+| `validate_code_review` | 校验 `summary/issues/score`，返回规范化结果；非法抛 `SchemaError` |
 
-1. 定义 `BugReport`（标题、严重级别、复现步骤），让模型从一段缺陷描述里抽取出结构化缺陷单。
-2. 把 `score` 的说明改成“0–100 的整数”，观察输出如何变化。
-3. 给出与字段无关的输入，观察模型如何填充；思考失败时程序该怎么处理（拒绝、重试或人工确认）。
+关键口径：
 
-## 运行与边界
+- `schema` 是 `{"字段": 类型}`，例如 `{"summary": str, "issues": list, "score": int}`。
+- `int` 不接受 `bool`；`list` 只校验容器，元素类型由业务函数再校验。
+- 解析/校验失败时，`repair_fn` 最多调用 **一次**；没有 `repair_fn` 直接失败。
+- `validate_code_review`：summary 去空白后非空；issues 全是字符串；score 是 1–10 的整数。
+- 任何不合法抛 `SchemaError`，不要把底层异常直接抛给调用方。
 
-- 会调用真实模型并产生少量费用。
-- 少数模型的 function calling 支持不稳；报错时可退回 `JsonOutputParser` 或换模型。
-- 结构合法不等于答案正确，程序仍要校验取值范围和业务规则。
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 纯 JSON | 正常解析 |
+| 2 | ```json 围栏 + 前后说明文字 | 正常解析 |
+| 3 | 缺 `score` | `SchemaError` |
+| 4 | `score: "8"` / `true` / `issues: "x"` | `SchemaError` |
+| 5 | JSON 是数组/字符串/数字 | `SchemaError` |
+| 6 | 非法 JSON + repair 返回合法 JSON | 成功，repair 只调一次 |
+| 7 | 非法 JSON + repair 仍非法 | `SchemaError` |
+| 8 | 非法 JSON + 无 repair | `SchemaError` |
+| 9 | score 0 / 11 / True | `SchemaError` |
+| 10 | issues 含非字符串 | `SchemaError` |
+
+## 验收标准
+
+`gate_check.py` 的 10 项全部 PASS：
+
+- 解析：纯 JSON、围栏、说明文字、缺字段、类型错、非对象。
+- 修复：成功一次、失败、无 repair。
+- 业务校验：合法审查结果、6 类非法结果。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 为什么修复只能做一次？无限修复的代价是什么？
+2. 类型校验通过后，为什么还要校验 `score` 的业务范围？
+3. 如果模型持续输出非法结构，服务应该返回什么、记录什么？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（10/10）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 1.3
+```
+
+对照时只回答：
+
+1. 参考实现用 `with_structured_output`，它把“格式约束”交给了谁？你的解析器补了什么？
+2. 参考实现拿到的是 Pydantic 对象；你的 gate 返回 dict。两者在后续评测里各有什么取舍？
+3. 参考实现没有业务范围校验；把 score 改成 0–100 后，哪里需要改？
+
+## 概念地图
+
+- **结构化输出**：字段名 + 类型 + 说明，让程序能直接使用。
+- **格式 vs 语义**：类型正确不代表内容正确；业务校验要单独做。
+- **一次修复**：给模型/解析器一次纠错机会；再失败就明确报错，避免成本和延迟失控。
+- **SchemaError**：把解析/校验失败变成可读错误，方便上层重试或降级。
+- **Pydantic 对象 vs dict**：对象有类型提示；dict 更轻、更容易跨层传递。
+
+## 边界
+
+- gate 用假文本，不调用真实模型；真实 function calling 的稳定性另验。
+- 通过 gate 只证明解析/校验/修复结构正确，不证明字段内容正确。
+- 业务规则（如严重级别枚举、复现步骤必填）要按场景继续加。

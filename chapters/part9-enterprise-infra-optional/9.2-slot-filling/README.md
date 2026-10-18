@@ -1,58 +1,65 @@
-# 9.2 槽位与追问：只补真正缺少的信息
+# L9 槽位填充 · Gate（原 9.2）
 
 [全书目录](../../README.md) · [上一章 9.1](../9.1-intent-fewshot/README.md) · [下一章 9.3](../9.3-stable-json-output/README.md)
 
-- **目标**：显式保存槽位状态，只在缺必填信息时追问；意图只决定走哪条业务线，退款仍必须有订单号。
-- **前置**：9.1（其累积代码）。
-- **环境**：离线测试，真实服务另验；累积项目，先还原再运行。
-- **命令**：`python tools/materialize.py enterprise 9.2-slot-filling`，进入 `.build/enterprise/9.2-slot-filling/enterprise-support` 后运行 `python -m pytest -q`
-
-## 问题
-
-用户说我要查订单，系统还缺订单号。下一轮给了订单号以后，不能再次从头问。槽位状态帮助应用跨轮保存已获得的信息。
-
-## 概念
-
-槽位是完成业务所需字段；SlotState 保存当前值；缺参判断决定下一次追问。提取出一个编号不代表该用户有权访问这个订单。
-
-## 流程
-
-1. extract_slots 提取本轮信息。
-2. resolve_slots 与历史合并。
-3. 根据意图检查必填字段。
-4. next_question 只询问必要缺项。
-
-## 本章交付
-
-- `slots.py`：订单号抽取、槽位合并、缺参提示。
-- `tests/test_slots.py`：验证跨轮补参和不同意图的槽位边界。
-
-## 代码导读
-
-slots.py 按提取、合并、追问顺序阅读，核对切换意图时哪些字段应继续保留。
-
-实现文件：
-
-- [slots.py](src/enterprise_support/slots.py)
-
-## 练习
-
-设计两轮补参和一次中途换意图的对话，预测每轮状态与追问；检查已经填写的信息是否被误覆盖。
-
-在 [学习记录](workbook.md) 写下预测，运行后补实际结果，并记录一次失败或边界情形。
-
-## 运行与验收
+- **能力**：提取订单号；合并上一轮槽位；按意图列出缺失项；一次只追问一个槽位。
+- **v2 路径**：L9 / 选做（Gate；槽位填充）
+- **前置**：1.3（结构化输出）。
+- **时间盒**：4 小时（1h 读 + 2h 实现 + 1h 分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `src/enterprise_support/slots.py`。
+- **验收命令**：
 
 ```bash
-python tools/materialize.py enterprise 9.2-slot-filling
-cd .build/enterprise/9.2-slot-filling/enterprise-support
-python -m pytest -q
+python chapters/part9-enterprise-infra-optional/9.2-slot-filling/gate/gate_check.py
 ```
 
-本章是累积项目，先还原完整状态再运行测试，不要把本章新增文件当作独立应用。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
+
+## 为什么做这个 gate
+
+槽位填充最容易出这些错：
+
+- 把“我要退款”里的模糊词猜成订单号；
+- 新值不覆盖旧值，用户改口无效；
+- 必填项不区分意图，闲聊也追问订单号；
+- 一次追问所有缺失项，用户不知道先答哪个；
+- 修改上一轮 state，导致串话。
+
+这个 gate 用固定话术验证提取、合并、缺失和追问。
+
+## 任务
+
+实现 `extract_slots`、`resolve_slots`、`next_question`：
+
+| 函数 | 你要交付的行为 |
+|---|---|
+| `extract_slots` | 识别订单号/order id，值转大写 |
+| `resolve_slots` | 合并 previous + 本轮；返回 intent/values/missing |
+| `next_question` | 有缺失返回订单号追问，否则 None |
+
+关键口径：
+
+- 未知 intent -> `ValueError`。
+- 新值覆盖旧值；不修改 previous。
+- `refund_status/order_status` 必填 order_id；shipping/handoff 不追问。
+- 一次只追问第一个缺失项。
+
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 中文/英文订单号 | 提取并大写 |
+| 2 | 无订单号 | {} |
+| 3 | previous 有旧值+新值 | 新值覆盖 |
+| 4 | “我要退款” | missing=order_id |
+| 5 | shipping | 不追问 |
+| 6 | 未知 intent | `ValueError` |
+
+## 验收标准
+
+`gate_check.py` 的 5 项全部 PASS；通过后写 workbook 三个问题。
 
 ## 边界
 
-当前是规则提取基线；替换为模型提取仍应复用同一契约并验证跨会话隔离。
-
-规则抽取用于建立可测试基线；上线时可替换为 LLM schema 抽取，但仍必须复用同一 `SlotState` 契约和缺参校验。
+- gate 用正则提取，不验证模型理解。
+- 真实多轮/权限/槽位校验见参考实现与 9.1。

@@ -1,41 +1,52 @@
-# 4.13 Text2SQL：先验证查询，再访问结构化数据
+# L4.12 Text2SQL 安全门 · Gate（原 4.13）
 
 [全书目录](../../README.md) · [上一章 4.12](../4.12-tool-safety-search/README.md) · [下一章 4.14](../4.14-supervisor-fanout/README.md)
 
-- **目标**：让 Agent 能查结构化数据：先验证 SQL 是否安全，再访问数据库，并按问题类型分流到 Text2SQL 或 RAG。
-- **前置**：4.7；SQLite 基础。
-- **环境**：离线，不调用模型；`app.db` 由脚本自己创建。
-- **命令**：`python tools/run_chapter.py 4.13`
+- **能力**：SELECT-only；危险关键字；表白名单；强制 LIMIT；结构化/非结构化分流。
+- **v2 路径**：L4.12 / 选做（Gate；Text2SQL 安全门）
+- **前置**：9.6（只读 SQL）。
+- **时间盒**：4 小时。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `text2sql_agent.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part4-agents-langgraph/4.13-text2sql-agent/gate/gate_check.py
+```
 
-RAG 适合问文档，企业里还有大量数据在数据库里：订单、财务指标、评测记录。要回答“示例科技最新一期营收是多少”，需要把自然语言变成只读 SQL，查询后再用人话解释结果。把生成 SQL 的工作交给模型时，安全必须由程序保证。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **Text2SQL 流程**：自然语言问题 → 生成只读 SQL → 校验 → 查询 SQLite → 解释结果。
-- **`validate_sql` 是安全门**：只允许 `SELECT`；命中危险关键字（`insert`、`update`、`delete`、`drop`、`pragma` 等）就拦；`from`、`join` 后的表必须在白名单内；必须带 `LIMIT`。任何一条不过就抛错，绝不放行到数据库。
-- **教学版用规则模拟生成 SQL**：`generate_sql` 用关键词规则代替模型，避免一上来就把安全性交给模型。以后换成 LLM 生成 SQL，`validate_sql` 也必须保留。
-- **纵深防御**：生产环境再叠一层只读连接（`mode=ro`），即使 `validate_sql` 被绕过，也写不了库。
-- **分流**：`route_question` 按关键词把结构化指标和历史对话交给 Text2SQL，其他问题交给 RAG。
+让模型生成 SQL，最大风险是写操作/越权表/全表扫描；分流错还会把概念问题送进数据库。
 
-## 流程
+## 任务
 
-1. `init_demo_data` 建表 `sales`、`conversations` 并写入演示数据（可重复运行）。
-2. 对四个问题分别 `route_question`；走 Text2SQL 的调用 `text2sql_answer`：`generate_sql` → `execute_sql`（内部先 `validate_sql`）→ `explain_result`。
-3. 答案里附带实际执行的 SQL，方便溯源和排错。
+实现 `validate_sql` 与 `route_question`：
 
-## 代码导读
+| 守卫 | 规则 |
+|---|---|
+| 前缀 | 必须 SELECT |
+| 关键字 | insert/update/delete/drop/alter/create/pragma/attach/detach/replace |
+| 表 | 只允许 sales/conversations |
+| LIMIT | 必须显式出现 |
 
-[text2sql_agent.py](text2sql_agent.py)：先看 `validate_sql` 的四道守卫，再看 `execute_sql` 里“先校验、后执行”的顺序，最后看 `route_question`。
+分流：营收/利润/历史/SQL 等 -> text2sql，否则 rag。
 
-## 练习
+## 故障注入（必须亲手触发）
 
-1. 构造几条危险 SQL（`DELETE`、多语句、非白名单表、不带 `LIMIT`），确认 `validate_sql` 都会拦截。
-2. 让 `generate_sql` 故意输出一条带 `--` 注释或分号的 SQL，看守卫能否拦住，并思考哪里还不够严。
-3. 把 `route_question` 换成 4.7 的结构化意图分类。
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 合法 SELECT | 通过 |
+| 2 | DELETE/多语句 | 拒绝 |
+| 3 | pragma/非白名单/无 LIMIT | 拒绝 |
+| 4 | 营收/历史问题 | text2sql |
+| 5 | 概念问题 | rag |
 
-## 运行与边界
+## 验收标准
 
-- 规则版守卫不是完整的 SQL 解析，只演示安全底线；生产需要更严格的解析和只读账号，见 9.6。
-- 关键词分流会误判，真实系统要用评测集验证。
+`gate_check.py` 的 4 项全部 PASS；通过后写 workbook 三个问题。
+
+## 边界
+
+- 不执行真实 SQL；只验证安全门/分流。
+- 生产仍需只读连接/RLS/参数化。

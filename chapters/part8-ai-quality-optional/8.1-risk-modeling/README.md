@@ -1,69 +1,50 @@
-# 8.1 AI 测试策略：先找业务风险
+# L8 风险建模 · Gate（原 8.1）
 
-[全书目录](../../README.md) · [下一章 8.2](../8.2-eval-data-engineering/README.md)
+[全书目录](../../README.md) · [上一章 7.8](../../../flagship-project/m8-evidence-final-frontend/step3/README.md) · [下一章 8.2](../8.2-eval-data-engineering/README.md)
 
-- **目标**：测试优先级必须由业务风险决定，而不是由模块数量决定。
-- **前置**：第 3 篇、第 7 篇（测试对象是第 7 篇的最终后端）。
-- **环境**：离线测试；累积项目，先还原再运行。
-- **命令**：`python tools/materialize.py quality 8.1-risk-modeling`，进入 `.build/quality/8.1-risk-modeling/ai-testing` 后运行 `python -m pytest -q`
-
-## 问题
-
-测试背景可以帮助我们识别AI系统的薄弱处，但首先要决定优先保护什么。答错商品介绍和泄露另一租户订单，影响不同，测试投入也应不同。
-
-## 概念
-
-风险由业务影响、发生可能与可发现性共同描述；风险矩阵把这些判断变成可讨论的排序，而不是按代码文件数量平均分配测试。
-
-## 流程
-
-1. 列出用户场景与潜在失败。
-2. 用 Risk 保存各项判断。
-3. RiskMatrix 汇总排序。
-4. 把最高风险转换为具体验收场景。
-
-```text
-业务场景 → Risk(影响 × 发生可能性) → 优先级 → 测试覆盖缺口
-```
-
-## 衔接与新增
-
-第 7 篇以浏览器前端（7.8 / step3）收尾；从章节 8.1 起进入可选的 AI 自动化测试专项。测试对象仍是同一个客服 Copilot（7.8 / step2 的后端），测试工具独立放在 `ai_testing` 包里，不混进业务代码。
-
-**本章新增**
-
-| 文件 | 作用 |
-|---|---|
-| `pyproject.toml` | 建立 章节 8.1–8.10 专项的可还原 Python 基线 |
-| `src/ai_testing/risk.py` | 风险登记、评分、分级和测试覆盖检查 |
-| `tests/test_risk.py` | 验证风险排序、重复登记和覆盖缺口 |
-
-## 代码导读
-
-risk.py 先读 Risk 的字段，再读 RiskMatrix 的排序逻辑，对照测试中的边界风险。
-
-实现文件：
-
-- [risk.py](src/ai_testing/risk.py)
-
-## 练习
-
-为退款误答、跨用户订单和流式断连各写一条风险，解释评分依据，再检查最高项是否已有测试。
-
-在 [学习记录](workbook.md) 写下预测，运行后补实际结果，并记录一次失败或边界情形。
-
-## 运行与验收
+- **能力**：计算风险分/等级；风险入表去重；稳定排序；发现未覆盖领域。
+- **v2 路径**：L8 / 选做（Gate；风险建模）
+- **前置**：3.1（失败分析）。
+- **时间盒**：4 小时。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `src/ai_testing/risk.py`。
+- **验收命令**：
 
 ```bash
-python tools/materialize.py quality 8.1-risk-modeling
-cd .build/quality/8.1-risk-modeling/ai-testing
-python -m pytest -q
+python chapters/part8-ai-quality-optional/8.1-risk-modeling/gate/gate_check.py
 ```
 
-本章是累积项目，先还原完整状态再运行测试，不要把本章新增文件当作独立应用。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
+
+## 为什么做这个 gate
+
+测试策略不能凭感觉：impact/likelihood 越界、编号重复、排序不稳定、风险领域空白，都会让“风险清单”变成摆设。
+
+## 任务
+
+实现 `RiskMatrix` 与 `risk_level`：
+
+| 接口 | 要求 |
+|---|---|
+| risk_level | score=impact×likelihood；≥16 critical、≥9 high、≥4 medium、否则 low；越界报错 |
+| add | id/area 非空；1–5 分；重复 id -> ValueError |
+| prioritized | score 降序，同分 id 升序 |
+| uncovered_areas | required 中没有条目的领域 |
+
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 4×4/3×3/2×2/1×1 | critical/high/medium/low |
+| 2 | 分数 0/6 | `ValueError` |
+| 3 | 重复 id | `ValueError` |
+| 4 | 同分不同 id | 按 id 稳定排序 |
+| 5 | 缺少领域 | uncovered 返回 |
+
+## 验收标准
+
+`gate_check.py` 的 4 项全部 PASS；通过后写 workbook 三个问题。
 
 ## 边界
 
-本篇是独立测试工具累积线，评分是业务判断的记录，不是对真实事故概率的统计估计。
-
-风险矩阵只能决定“先测什么”，不能证明功能已经正确；下一章会把风险中的业务场景转成可执行评测数据。
+- 只验证风险算术/排序，不证明风险清单完整。
+- 真实业务风险需领域专家评审。

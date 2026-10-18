@@ -63,6 +63,8 @@ print(snapshot_download('BAAI/bge-small-zh-v1.5'))   # 打印模型所在的本�
 | 9 | 企业数据与推理设施专项 | [第 9 篇](chapters/part9-enterprise-infra-optional/README.md) | 选修 |
 | 10 | MCP 鉴权与 A2A | [第 10 篇](chapters/part10-mcp-a2a-optional/README.md) | 选修 |
 
+> 岗位对标、核心/选修取舍与 12 周路径提案见 [docs/curriculum-v2.md](docs/curriculum-v2.md)；每章标题下的 `v2 路径` 写明阶段与必做/选做，速查见 [章节总地图](chapters/README.md#v2-路径速查)。
+
 ## 目录说明
 
 ```text
@@ -88,6 +90,8 @@ python tools/run_chapter.py 1.1
 python tools/run_chapter.py 2.1 load_split.py
 python tools/run_chapter.py 3.7 --no-upload
 ```
+
+> 82 章全部有验收方式：75 章 gate、7 章清单（0.1、0.2、1.6、1.7、3.6、4.15、5.6）；项目 29 步用 [flagship-project/ACCEPTANCE.md](flagship-project/ACCEPTANCE.md) 总清单。gate 先按各章 README 闭卷实现，再运行该章 `gate/gate_check.py`，全部 PASS 后再看参考实现。批次记录见 [docs/gate-b6i-validation.md](docs/gate-b6i-validation.md) 等 `docs/gate-*-validation.md`。
 
 ## 还原累积项目
 
@@ -116,6 +120,6 @@ python -m capstone.project_baseline --json
 python -m pytest capstone/test_regression.py -v
 ```
 
-实质性进展先写 [TASKS.md](TASKS.md) 与验证记录，再更新 [PROJECT_STATUS.md](PROJECT_STATUS.md)。个人背景见 `memory/`，历史架构决策见 [docs/legacy/](docs/legacy/README.md)，旧客服原型见 [archive/](archive/README.md)。
+实质性进展先写 [TASKS.md](TASKS.md) 与验证记录，再更新 [PROJECT_STATUS.md](PROJECT_STATUS.md)。个人背景见 `memory/`，历史架构决策见 [docs/legacy/](docs/legacy/README.md)。
 
 学习时解释输入、输出、调用链和失败分支，并用测试证明自己的理解。真实模型、远端 CI、staging、容量与恢复证据仍需单独核实。

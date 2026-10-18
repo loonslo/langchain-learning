@@ -1,47 +1,103 @@
-# 2.1 文档加载与切分：资料如何进入系统
+# L2.1 文档加载与切分 · Gate（原 2.1）
 
 [全书目录](../../README.md) · [上一章 1.8](../../part1-foundations/1.8-cli-chatbot/README.md) · [下一章 2.2](../2.2-embed-retrieve/README.md)
 
-- **目标**：把文件读成 Document，再切成适合检索的片段。
-- **前置**：无。
-- **环境**：离线，不调用模型。
-- **命令**：`python tools/run_chapter.py 2.1 load_split.py`
+- **能力**：把 UTF-8 文件读成可追溯文档；按大小/重叠切成非空片段，保留 source。
+- **v2 路径**：L2.1 / 核心（Gate；加载与切分）
+- **前置**：无（会读文件即可）。
+- **时间盒**：4 小时（1h 读 + 2h 实现 + 1h 边界分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `load_split.py` / `load_split_formats.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part2-rag/2.1-load-split/gate/gate_check.py
+```
 
-知识问答的第一步不是问模型，而是把资料整理成程序能处理的片段。整篇塞进请求会增加成本，关键事实容易被淹没；切得不好又会切断条件，让片段失去意义。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **Document**：`page_content` 是正文，`metadata` 保存来源、页码、标题等。元数据要一直保留到回答引用。
-- **加载器**：按文件格式把文件读成 Document。txt 用 `open()` 即可，PDF、CSV 等用对应的 loader。
-- **切分器**：把长正文切成片段。`chunk_size` 是片段最大长度；`chunk_overlap` 让相邻片段共享交界内容，避免边界处的事实被截断，重叠过大则产生重复。
-- **递归切分**：按分隔符优先级（段落 > 换行 > 句号 > 逗号 > 空格 > 单字）逐级尝试，尽量在自然边界切开。
+RAG 的第一步不是问模型，而是把资料变成**可追溯**的片段。常见事故：
 
-## 流程
+- 文件读失败/编码错，整条建库静默为空；
+- 空片段进入索引，召回一堆空内容；
+- 片段超过预算，塞爆上下文；
+- 重叠参数非法，切分死循环或重复过多；
+- 片段丢了 `source`，回答无法引用。
 
-1. 读取长文章 `chapters/shared-data/long_article.txt`（约 8.7KB，2.7、2.8 也用它）。
-2. 包成 Document，记录来源。
-3. 用递归切分器切成片段（`chunk_size=120`，`chunk_overlap=20`）。
-4. 打印每个片段的序号、字数和内容，检查边界与来源。
+这个 gate 用临时 UTF-8 文件和固定字符串，验证加载、校验、切分和重叠。
 
-## 代码导读
+## 任务
 
-| 文件 | 内容 |
+实现 `gate/starter.py` 的两个函数：
+
+| 函数 | 你要交付的行为 |
 |---|---|
-| [load_split.py](load_split.py) | 最短路径：`open` → Document → 递归切分 → 打印。先读它。 |
-| [load_split_formats.py](load_split_formats.py) | `load_and_split(path)`：按扩展名选加载器（pdf、docx、csv、json、md、html、代码），先按结构切，再统一细切。 |
+| `load_text` | 读 UTF-8；返回 `{"text","source"}`；不存在/读取失败抛 `ValueError` |
+| `split_text` | 校验 doc/参数；空文本返回 `[]`；按 `chunk_size`/`overlap` 切；每段带 source/index |
 
-## 练习
+关键口径：
 
-1. 运行 `load_split.py`，先预测片段数量。再把 `chunk_size` 改为 60、300，`chunk_overlap` 改为 0、60，观察数量、重复内容和片段完整度。
-2. 在文章里找一个横跨两个片段的事实（条件在前一片段末尾，结论在下一片段开头），判断切分后单个片段是否还能回答它。
-3. 运行 `python tools/run_chapter.py 2.1 load_split_formats.py`，对比 txt 与 md 的切分：md 片段的 `metadata` 带有所属标题。
+- `source` 只取文件名（`Path.name`），不暴露绝对路径。
+- `chunk_size` 必须 > 0；`overlap` 在 `[0, chunk_size)`。
+- 片段非空、长度 ≤ `chunk_size`、index 从 1 连续编号。
+- 相邻片段按字符重叠 `overlap` 个字符。
+- 不修改传入的 `doc`。
 
-在 [学习记录](workbook.md) 写下预测，运行后补实际结果，并记录一次失败或边界情形。
+## 故障注入（必须亲手触发）
 
-## 运行与边界
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 不存在的文件 | `ValueError` |
+| 2 | 空文本/纯空白 | `[]` |
+| 3 | `chunk_size=0` | `ValueError` |
+| 4 | `overlap=-1` / `overlap>=chunk_size` | `ValueError` |
+| 5 | doc 缺 `text/source` 或类型错 | `ValueError` |
+| 6 | 20 字符、10/2 切分 | 3 段，第二段以第一段末尾 2 字符开头 |
 
-- 文章路径由 `common.LONG_DOC` 提供，与工作目录无关。第 2 篇后面的问答类章节改用短文档 `test_doc.txt`（评测集的问题基于它），见 [shared-data](../../shared-data/README.md)。
-- PDF、Word 等格式有各自依赖；读取成功不代表扫描件文字被识别，无文字层的 PDF 得到的是空文本。
-- 片段数量和边界只反映当前参数。切得好不好，要靠后续的检索评测（2.4、第 3 篇）判断。
+## 验收标准
+
+`gate_check.py` 的 6 项全部 PASS：
+
+- UTF-8 加载与 source、缺失文件。
+- 空文本、切分/编号/重叠、非法参数、非法文档。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 为什么片段要带 source，而不是只存正文？
+2. `overlap` 太大/太小分别有什么代价？
+3. 真实 PDF 无文字层时，`load_text` 会得到什么？该怎么提示用户？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（6/6）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 2.1 load_split.py
+python tools/run_chapter.py 2.1 load_split_formats.py
+```
+
+对照时只回答：
+
+1. 参考实现用 `RecursiveCharacterTextSplitter`，它比本 gate 的字符切分多做了什么？
+2. 参考实现的 metadata 如何从文档复制到片段？你的实现在哪一步丢了 metadata？
+3. 参考实现对 PDF/CSV 用不同 loader；本 gate 只做 txt，边界在哪里？
+
+## 概念地图
+
+- **Document**：正文 + metadata；metadata 要保留到引用。
+- **加载**：按格式读取；编码/无文字层是常见失败。
+- **切分**：chunk_size 控制成本与聚焦，overlap 缓解边界截断。
+- **可追溯**：每个片段带 source/index，回答才能引用。
+- **空片段**：不应进入索引；它会让召回和评测同时失真。
+
+## 边界
+
+- gate 只做 txt + 字符切分，不验证递归分隔符、PDF/Word/CSV。
+- 通过 gate 不证明切分质量；切分好坏要用 2.7/2.9 的检索评测判断。

@@ -1,5 +1,21 @@
-# 章节 10.4 工作簿
+# L10 跨 Agent 委派 · Gate 记录
 
-1. 客服 Agent 为什么不应直接拿到订单数据库密码？
-2. 委托上下文中哪些字段可传，哪些永远不能传？
-3. 若订单 Agent 超时，客服 Agent 应如何给用户可恢复的结果？
+任务书见 [README](README.md)。先预测，再实现，最后填结果；通过 gate 之前不要打开 `src/enterprise_support/integration.py`。
+
+## Gate 结果
+
+- 首次运行：x / 5
+- FAIL 项与修正：待填写
+- 最终：5 / 5
+- `gate_report.json`：待填写
+
+## 解释
+
+1. 为什么身份/scope 不能从请求 metadata 取？
+2. 缺订单号为什么返回 input-required？
+3. error/auth 为什么要翻译成用户提示？
+
+## 未验证边界
+
+- 进程内假 client/reader，不连真实服务。
+- 网络/超时/重试未验证。

@@ -1,58 +1,65 @@
-# 9.10 兼容模型接口：配置相同也要核对能力
+# L5.10 兼容模型配置 · Gate（原 9.10）
 
 [全书目录](../../README.md) · [上一章 9.9](../9.9-compose-linux-ops/README.md) · [下一章 9.11](../9.11-vllm-gpu/README.md)
 
-- **目标**：让业务代码只依赖 `base_url + model + 凭据引用`，不绑定具体厂商 SDK：云 API、Ollama、vLLM 都通过同一份最小 OpenAI 兼容配置接入。
-- **前置**：9.9（其累积代码）。
-- **环境**：离线测试，真实服务另验；累积项目，先还原再运行。
-- **命令**：`python tools/materialize.py enterprise 9.10-openai-compatible-provider`，进入 `.build/enterprise/9.10-openai-compatible-provider/enterprise-support` 后运行 `python -m pytest -q`
-
-## 问题
-
-云 API 与本机推理可能提供类似接口，业务代码可以减少厂商耦合。但兼容地址格式不代表工具调用、流式或结构化输出行为全部一致。
-
-## 概念
-
-Provider 保存端点、模型和凭据引用；兼容接口统一请求形状；能力验证确认应用实际需要的特性。
-
-## 流程
-
-1. 构造 OpenAICompatibleProvider。
-2. validate_provider 检查端点和凭据引用。
-3. 业务层消费配置。
-4. 对所需能力做独立契约测试。
-
-## 本章交付
-
-- `providers.py`：云模型 / 自托管模型共用的端点与配置校验。
-- `tests/test_providers.py`：验证 `/v1` 边界、密钥只引用环境变量和开发/生产 URL 约束。
-
-## 代码导读
-
-providers.py 先读配置字段，再读校验规则，观察开发和生产配置范围的区别。
-
-实现文件：
-
-- [providers.py](src/enterprise_support/providers.py)
-
-## 练习
-
-为云端和本机端点各写一份无真实凭据的配置，列出还要验证的流式、工具与输出行为。
-
-在 [学习记录](workbook.md) 写下预测，运行后补实际结果，并记录一次失败或边界情形。
-
-## 运行与验收
+- **能力**：拼接 chat/completions URL；校验 base_url/model/api_key_env/生产 HTTPS。
+- **v2 路径**：L5.10 / 选读（Gate；兼容模型配置）
+- **前置**：5.1（服务配置）。
+- **时间盒**：4 小时（1h 读 + 2h 实现 + 1h 分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `src/enterprise_support/providers.py`。
+- **验收命令**：
 
 ```bash
-python tools/materialize.py enterprise 9.10-openai-compatible-provider
-cd .build/enterprise/9.10-openai-compatible-provider/enterprise-support
-python -m pytest -q
+python chapters/part9-enterprise-infra-optional/9.10-openai-compatible-provider/gate/gate_check.py
 ```
 
-本章是累积项目，先还原完整状态再运行测试，不要把本章新增文件当作独立应用。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
+
+## 为什么做这个 gate
+
+兼容接口“配置看起来一样”，但边界容易错：
+
+- base_url 不带 /v1，请求 404；
+- 末尾多 `/`，拼出 `//chat/completions`；
+- api_key_env 写成密钥值，密钥进配置；
+- 生产用 http，明文传输；
+- model 为空，运行时才报错。
+
+这个 gate 用配置字典验证形状，不发请求。
+
+## 任务
+
+实现 `chat_completions_url` 和 `validate_provider`：
+
+| 函数 | 你要交付的行为 |
+|---|---|
+| `chat_completions_url` | 去末尾 `/` + `/chat/completions`；空/非字符串报错 |
+| `validate_provider` | 返回错误列表；URL/`/v1`/model/env/生产 HTTPS |
+
+关键口径：
+
+- base_url 必须是完整 http(s) URL。
+- path 必须以 `/v1` 结束。
+- `api_key_env` 不能为空、不能含 `=`。
+- `app_env=production` 必须 https。
+- 空元组表示通过。
+
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 合法配置 | () |
+| 2 | 缺 scheme/非 http(s) | 报错 |
+| 3 | 不以 /v1 结束 | 报错 |
+| 4 | 空 model/空 env/env 含 = | 报错 |
+| 5 | 生产 http | 报错 |
+| 6 | 末尾 `/` 拼接 | 不出现 `//chat` |
+
+## 验收标准
+
+`gate_check.py` 的 5 项全部 PASS；通过后写 workbook 三个问题。
 
 ## 边界
 
-本章配置校验不发起模型请求；真实端点的兼容性、质量和认证尚未验收。
-
-OpenAI 兼容只解决调用接口，不保证 chat template、工具调用、JSON schema、embedding 或 token 统计语义完全相同。替换推理框架后必须回放评测集（7.1 / step3 的离线评测，以及 8.10 导出的回归样本）。
+- 只校验形状，不验证真实模型能力/兼容性。
+- 密钥值/网络请求未涉及。

@@ -1,9 +1,11 @@
 # Tasks
 
-状态核对：2026-09-30。当前课程采用章节和用途命名，82 个章节与 29 个项目步骤先提供文字教程，再引导阅读实现。统一入口见 `chapters/README.md`；目录与文件存在不代表本人已学完或真实环境验收通过。最新验证见 `docs/course-review-validation.md`。
+状态核对：2026-10-18。课件全量结构完成：82 章 + 29 步均有 v2 标签与验收方式（75 章 gate + 7 章清单 + 29 步总清单）。统一入口见 `chapters/README.md`；目录与文件存在不代表本人已学完或真实环境验收通过。最新收口验证见 `docs/gate-b6i-validation.md`；岗位对标与路径提案见 `docs/curriculum-v2.md`。
 
 ## Active
 
+- [ ] **课件维护** - 新增/修改章节时同步更新 `course-v2-map.json`、章节索引、README 任务书与验收记录；改 gate 后跑参考解、骨架、pytest、断链、ruff。
+- [ ] **真实学习/试教** - 按各章任务书实际完成 gate 或清单并记录失败；这不是课件结构完成的前置。
 - [ ] **核对旗舰项目与选修阶段验收** - 按当前章节或里程碑读取代码与测试，补运行证据；`python -m capstone.milestones --strict-evidence` 只确认所列文件存在，不等于运行验收
 - [ ] **完成真实环境证据** - 依次补齐真实模型评测（含第 1–6 篇需要模型的章节，本轮审查只做了离线运行）、远端 CI、staging、容量、恢复和事故演练
 - [ ] **核对第三方内容与保留的证据文件** - `面试题/` 含第三方整理内容，公开前先核对版权；`reports/` 保留了 3 个被引用的文件（见 `reports/README.md`），删除它们会让 `python -m capstone.interview_evidence --strict-evidence` 失败，并使 `capstone/docs/portfolio/` 引用的压测数字失去来源
@@ -15,6 +17,38 @@
 - [ ] **求职准备** - 只从 `capstone/docs/portfolio/` 和真实报告提取可证明结论
 
 ## Done
+
+- [x] **B6i 全量收口（2026-10-18）** - 补 3.8、4.13、8.1、8.2、8.3、8.7、8.8 七个 gate；为 0.1、0.2、1.6、1.7、4.15、5.6 增加清单；82 章 75 gate + 7 checklist，29 步总清单落地。参考解全部通过、骨架 0 通过；测试 28 passed、断链 0、v2 标签 111 unchanged、ruff 通过。证据见 `docs/gate-b6i-validation.md`
+
+- [x] **B5b 部分（2026-10-18）** - 5.4 SQLite、5.7 安全护栏改为 gate；参考解 4/4、7/7；默认骨架 0 通过。5.3/5.5/5.8 未做。证据见 `docs/gate-b5b-validation.md`
+
+- [x] **B5a Gate 化（2026-10-18）** - 5.2 可靠性改为 gate：指数退避/上限、可重试判断、成本估算；临时参考解 5/5，默认骨架 0 通过；测试 28 passed、断链 0、ruff 通过。证据见 `docs/gate-b5a-validation.md`
+
+- [x] **B4d 完成（2026-10-18）** - 补 4.14 Supervisor/Fan-out gate（5/5）；B4d 四项 7/7、4/4、5/5、5/5，B4 收口。
+
+- [x] **B4d 部分（2026-10-18）** - 3.9 Agent 轨迹评测、4.11 流式/HITL、4.12 搜索信任边界改为 gate；4.14 多 Agent 未做。临时参考解 7/7、4/4、5/5；默认骨架 0 通过；测试 28 passed、断链 0、ruff 通过。证据见 `docs/gate-b4d-validation.md`
+
+- [x] **B4c Gate 化（2026-10-18）** - 4.8 规划与执行、4.9 可观测性、4.10 检查点与上下文改为 gate：计划解析/执行异常/超长截断、轨迹记录/汇总、会话隔离/副本/上下文裁剪；新增 `gate/starter.py`、`gate/gate_check.py`，重写 README/workbook。临时参考解跑通 6/6、4/4、6/6；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实模型/checkpointer；证据见 `docs/gate-b4c-validation.md`
+
+- [x] **B4b Gate 化（2026-10-18）** - 4.6 节点可靠性、4.7 结构化路由改为 gate：降级/可重试/真实超时、枚举路由解析/意图分类；新增 `gate/starter.py`、`gate/gate_check.py`，重写 README/workbook。临时参考解跑通 7/7、4/4；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实模型；证据见 `docs/gate-b4b-validation.md`
+
+- [x] **B4a Gate 化（2026-10-18）** - 4.1–4.4 改为 gate：Agent 有界循环、LangGraph 线性/分支、循环与 recursion_limit、状态 reducer/fan-out；新增 `gate/starter.py`、`gate/gate_check.py`，重写 README/workbook。临时参考解跑通 8/8、4/4、4/4、5/5；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实模型/检查点；证据见 `docs/gate-b4a-validation.md`
+
+- [x] **B3b Gate 化（2026-10-18）** - 3.7 回归对比、3.10 失败诊断改为 gate；3.6 LangSmith 因依赖外部服务改为清单验收（`gate/CHECKLIST.md`）。临时参考解跑通 8/8、5/5；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未运行真实模型/LangSmith/DeepEval；证据见 `docs/gate-b3b-validation.md`
+
+- [x] **B3a Gate 化（2026-10-18）** - 把 3.1、3.2、3.4、3.5 改成 gate：失败定位顺序、拒答/关键词指标、评测集 schema/覆盖、评测集合并与 RAGAS 行；新增 `gate/starter.py`、`gate/gate_check.py`，重写 README/workbook。临时参考解跑通 8/8、6/6、7/7、8/8；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未运行真实模型/RAGAS；证据见 `docs/gate-b3a-validation.md`
+
+- [x] **B2b Gate 化（2026-10-18）** - 把 2.6–2.11 改成 gate：PDF 溯源、切分策略、混合检索 RRF、查询改写、JSON 持久化、重排/recall@k；新增 `gate/starter.py`、`gate/gate_check.py`，重写 README/workbook。临时参考解跑通 9/9、7/7、7/7、9/9、9/9、8/8；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未运行真实 embedding/reranker/PDF；证据见 `docs/gate-b2b-validation.md`
+
+- [x] **B2a Gate 化（2026-10-18）** - 把 2.1、2.2、2.3 改成 gate：加载/切分、向量化/索引、最小 RAG；新增 `gate/starter.py`、`gate/gate_check.py`，重写 README/workbook。临时参考解跑通 6/6、9/9、10/10；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未运行真实 embedding/模型；证据见 `docs/gate-b2a-validation.md`
+
+- [x] **B1 Gate 化（2026-10-18）** - 把 1.1–1.5、1.8 改成 gate：新增 `gate/starter.py`、`gate/gate_check.py`，重写 README/workbook，覆盖请求/响应契约、流式、结构化解析、会话预算、工具回灌、CLI 控制流。临时参考解跑通 11/11、10/10、10/10、12/12、11/11、11/11；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未运行真实模型、未验证真实学习者；证据见 `docs/gate-b1-validation.md`
+
+- [x] **课程全量结构修复（2026-10-18）** - 给 82 章 + 29 个旗舰步骤共 111 个 README 写入 `v2 路径`（阶段/核心/选做/核心阅读/跨篇顺序）；修 3.9 后移说明、5.2 在 5.1 之后、9.1/10.1 的代码血缘前置；新增 `docs/course-v2-map.json`、幂等工具 `tools/apply_v2_map.py` 与全量链接检查 `tools/check_course_links.py`。`apply_v2_map --check` 111 unchanged；258 个 Markdown 断链 0；离线测试 28 passed；ruff 通过。未物理移动 3.9、未重排目录、其余 77 章未 gate 化；证据见 `docs/course-v2-structure-validation.md`
+
+- [x] **5 个样板章改为 Gate（2026-10-18）** - 把 L1.6 / L2.9 / L3.4 / L4.4 / L5.1 对应到 2.5 / 2.4 / 3.3 / 4.5 / 5.1：新增 `gate/starter.py`、`gate/gate_check.py`（2.9 另有 `gate/cases.json`），重写 README 与 workbook，加入闭卷规则、故障注入和可执行验收。临时参考解离线跑通 16/16、14/14、14/14、14/14、17/17；默认骨架 0 通过（预期）；现有离线测试 28 passed；ruff 通过。未运行真实模型、未部署、未验证真实学习者从零实现；证据与边界见 `docs/gate-samples-validation.md`
+
+- [x] **课程路径 v2 提案（2026-10-18）** - 对照 5 份岗位样本与 1 份行业能力地图，审查 82 章 + 29 步的结构：给出核心 58 章 / 约 321 小时的 12 周路径、七道阶段出口门、现有章节处置与新增章节清单。只做路径设计与岗位对照，未修改章节目录、未运行课程测试；提案见 `docs/curriculum-v2.md`，不表示本人已学完或真实环境验收通过
 
 - [x] **PDF 书稿重建并定版 v1.0（2026-09-30）** - 把当日课程审查的修订同步进书稿：封面补版本号并改正配套代码说明；环境准备改为 `requirements-course.txt` + `python tools/run_chapter.py 0.1` 自检；代码地图去掉 `dayNN` 与已删除的 `customer_support/`；6 章改为 `flagship-project/` + `capstone/` 分别验收；7.7 端到端按 8.7 实际行为改写（当前不用流式、解析器不查结尾）；8 章还原脚本改为 `tools/materialize.py`。重建后 100 页、120 张图，机械与几何自检通过，书签 97 条。只做了构建与文本层核对，未做逐页目视检查；命令与边界见 `docs/course-book-v1-validation.md`
 

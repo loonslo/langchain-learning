@@ -3,6 +3,8 @@
 [全书目录](../../README.md) · [上一章 3.5](../3.5-eval-dataset-ragas/README.md) · [下一章 3.7](../3.7-eval-regression-curve/README.md)
 
 - **目标**：用 LangSmith 把一次 RAG 调用的每一步记成 trace，并把评测集传成 dataset 做在线评估。
+- **v2 路径**：L3.6 / 核心（清单验收；LangSmith 外部服务）
+- **验收方式**：依赖 LangSmith 外部服务，使用 [清单](gate/CHECKLIST.md) 核对 trace 与在线评估；不提供离线 `gate_check.py`。
 - **前置**：2.6；3.4、3.5（在线评估需要 `eval_set_full.json`）；`DEEPSEEK_API_KEY`；本地 embedding 模型。
 - **环境**：调用真实模型；`LANGSMITH_API_KEY` 可选，没配则跳过 LangSmith 部分。
 - **命令**：`python tools/run_chapter.py 3.6`

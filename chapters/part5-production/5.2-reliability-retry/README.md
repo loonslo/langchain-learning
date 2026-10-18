@@ -1,44 +1,104 @@
-# 5.2 超时、重试与成本统计：可靠也要有预算
+# L5.2 可靠性 · Gate（原 5.2）
 
 [全书目录](../../README.md) · [上一章 5.1](../5.1-serve-fastapi/README.md) · [下一章 5.3](../5.3-cost-cache-routing/README.md)
 
-- **目标**：给模型调用加上超时和重试，并能算清每次调用的 token 和成本。
-- **前置**：1.1、2.6；`DEEPSEEK_API_KEY`。
-- **环境**：调用真实模型。
-- **命令**：`python tools/run_chapter.py 5.2`
+- **能力**：生成指数退避序列；区分可重试/不可重试错误；按 usage 估算成本。
+- **v2 路径**：L5.1 / 核心（Gate；可靠性/退避/成本）
+- **前置**：5.1 的 gate（最小超时/重试）、1.1、2.6。
+- **时间盒**：5 小时（1h 读 + 3h 实现 + 1h 分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `reliability.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part5-production/5.2-reliability-retry/gate/gate_check.py
+```
 
-LLM 调用会超时、被限流、偶发失败。上线前必须加防护，还要能回答“每次调用花了多少 token、多少钱”。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **超时**：别让一次卡住的调用拖垮整个服务。
-- **指数退避重试**：失败后等 1 秒、2 秒、4 秒再试。手写版只为理解原理，有两个生产不能接受的坑：无差别重试（参数错误、鉴权失败重试也没用），没有随机抖动 jitter（大量客户端同时退避，会引发同步重试风暴）。
-- **生产做法**：`common.get_reliable_llm()`（超时 + `with_retry` + jitter + 可选备用模型），capstone 的问答链真实在用它。只重试瞬时故障，别吞异常。
-- **缓存**：只演示适用边界：评测和开发场景可以缓存以省钱；生产问答链路不接入（原因见代码注释）。
-- **token 与成本**：返回消息的 `usage_metadata` 里有 `input_tokens`、`output_tokens`、`total_tokens`，乘以单价即可粗算成本。
+重试和成本统计最容易出这些错：
 
-## 流程
+- 无差别重试，参数错/权限错也重试；
+- 退避没有上限，等待时间爆炸；
+- 没有 jitter，客户端同步重试打爆服务；
+- `max_retries` 含义混淆（次数 vs 总尝试）；
+- 成本公式除错 1000/1000000，或 usage 缺失时崩。
 
-1. `invoke_with_retry`：手写指数退避重试（对照组）。
-2. 直接使用 `common.get_reliable_llm()`：生产版。
-3. `build_tenacity_llm`：用 tenacity 做更精细的控制（了解即可）。
-4. `enable_eval_cache`：开启 SQLite 缓存，对比首次调用与命中缓存的耗时。
-5. 读取 `usage_metadata`，按占位单价粗算成本。
+这个 gate 用纯函数验证退避、可重试和成本公式，不调用模型。
 
-## 代码导读
+## 任务
 
-[reliability.py](reliability.py)：先看 `invoke_with_retry` 的注释里列出的两个坑，再看 `get_reliable_llm` 怎样解决它们（在 `common.py` 里）。
+实现 `gate/starter.py` 的三个函数：
 
-## 练习
+| 函数 | 你要交付的行为 |
+|---|---|
+| `backoff_delays` | base,2base,4base...，每项截断到 max_delay；参数校验 |
+| `is_retryable` | 只把 TimeoutError/ConnectionError 判为可重试 |
+| `estimate_cost` | total_tokens/1000*单价；缺失/None -> 0；负单价报错 |
 
-1. 断开网络或把超时设得很小，观察手写重试版的日志和最终报错。
-2. 说明为什么“参数错误”不该重试，而“429 限流”应该重试。
-3. 把占位单价换成你所用模型的真实价格，算一算 1000 次调用的成本。
+关键口径：
 
-## 运行与边界
+- `max_retries=0` -> []；负数/base<=0/max_delay<=0 -> `ValueError`。
+- 退避序列长度等于 max_retries，每项 `min(base*2^i, max_delay)`。
+- ValueError/KeyError/PermissionError 不可重试。
+- 成本保留浮点，不四舍五入。
 
-- 会调用真实模型并产生费用；缓存演示会在本章目录写 `.llm_cache.db`（已被 `.gitignore` 忽略）。
-- 重试只适用于幂等或只读的操作；有副作用的写操作需要幂等键，见 7.4。
-- 备用模型只能应对同一供应商的单个模型故障，不能解决整个供应商的故障。
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | max_retries=3 | [1,2,4] |
+| 2 | 6 次，max_delay=20 | [1,2,4,8,16,20] |
+| 3 | 0 次 / 负数 | [] / `ValueError` |
+| 4 | base=0 / max_delay=0 | `ValueError` |
+| 5 | Timeout/Connection/ValueError | True/True/False |
+| 6 | 2000 tokens，0.001 | 0.002 |
+| 7 | None/空 usage | 0.0 |
+| 8 | 负单价 | `ValueError` |
+
+## 验收标准
+
+`gate_check.py` 的 5 项全部 PASS：
+
+- 指数退避、参数校验、可重试、成本、成本参数。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 为什么“参数错误”不该重试？
+2. 退避为什么要有上限和 jitter？
+3. 成本公式里最容易写错的是什么？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（5/5）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 5.2
+```
+
+对照时只回答：
+
+1. 参考实现的 `invoke_with_retry` 有两个什么坑？
+2. `get_reliable_llm` 怎么解决这两个坑？
+3. `usage_metadata` 里哪个字段用于成本？
+
+## 概念地图
+
+- **超时**：单次调用上限。
+- **指数退避**：1/2/4…，加 jitter 防同步风暴。
+- **可重试**：瞬时错误才重试；确定性错误快速失败。
+- **成本**：tokens/1000*单价；usage 缺失要能降级。
+- **缓存边界**：评测可缓存；生产问答要防过期/失效。
+
+## 边界
+
+- gate 用纯函数，不调用真实模型/缓存。
+- 通过 gate 只证明退避/重试/成本逻辑正确。
+- 真实限流、主备切换、缓存失效见参考实现。

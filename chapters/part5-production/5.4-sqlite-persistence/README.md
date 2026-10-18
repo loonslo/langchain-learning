@@ -1,45 +1,105 @@
-# 5.4 SQLite 持久化：把问答变成可查询记录
+# L5.4 SQLite 持久化 · Gate（原 5.4）
 
 [全书目录](../../README.md) · [上一章 5.3](../5.3-cost-cache-routing/README.md) · [下一章 5.5](../5.5-docker-packaging/README.md)
 
-- **目标**：给 LLM 应用建一张可查询的对话日志表，并避开 SQLite 生产使用中的 6 个常见坑。
-- **前置**：4.10。
-- **环境**：离线，只用标准库的 SQLite。
-- **命令**：`python tools/run_chapter.py 5.4`（数据库 `app.db` 写在本章目录）
+- **能力**：建对话/反馈表；trace_id 幂等写入；游标分页；反馈校验。
+- **v2 路径**：L5.3 / 核心（Gate；SQLite 持久化）
+- **前置**：4.10（检查点）。
+- **时间盒**：6 小时（1h 读 + 4h 实现 + 1h 故障分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `sqlite_persistence.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part5-production/5.4-sqlite-persistence/gate/gate_check.py
+```
 
-4.10 的 checkpoint 存的是“图状态”，用来恢复会话。业务上还需要一张可查询的日志表：谁在什么时候问了什么、用了哪个模型、花了多少钱、多久返回、失败没有、用户点没点踩。这张表是成本核算、失败分析和评测集回流的数据源。5.1 的 HTTP 服务就使用本章的数据层。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **为什么用 SQLite**：一个文件就是一个库，零部署，标准库自带，适合单机服务、内部工具和中小并发。
-- **准确的边界**：不是“SQLite 不能上生产”，而是“SQLite 不能多机部署”。它支持多进程并发读，开 WAL 后读写不互相阻塞，真正的限制是同一时刻只有一个写事务，且锁基于文件；服务多副本部署（多个 pod 写同一个网络文件）时，文件锁在 NFS 上不可靠，会损坏数据。多副本部署是迁移到 PostgreSQL 最硬的触发条件，和数据量无关。选型的完整取舍见 [docs/legacy/ADR-001](../../../docs/legacy/ADR-001-对话日志存储选型.md)。
-- **六个坑**：
-  1. 连接泄漏：`with sqlite3.connect(...)` 只提交事务，不关连接。
-  2. `database is locked`：默认 journal 模式下写阻塞读。
-  3. 全表扫描：`WHERE user_id ORDER BY id` 没有索引。
-  4. 表结构改不动：没有版本号，加字段靠手工 `ALTER`。
-  5. 数据没法用：只存问答，算不出成本、查不出失败、导不出评测集。
-  6. 分页漂移：`LIMIT/OFFSET` 在持续写入的表上会漏数据或重复，要用游标分页。
-- **数据库路径用绝对路径**：相对路径跟着工作目录走，从不同位置运行会连到不同的文件，表现就是“数据莫名其妙丢了”。
+对话日志表最容易出这些错：
 
-## 流程
+- 每次 `with sqlite3.connect` 只提交不关闭，连接泄漏；
+- trace_id 不唯一，重试写出两条；
+- 用 OFFSET 分页，写入时漏数据/重复；
+- created_at 存本地时间，跨机器无法比较；
+- 反馈引用不存在的会话，脏数据；
+- 不建索引，历史查询全表扫。
 
-`sqlite_persistence.py` 的演示：`migrate()` 建表并升级 schema 版本 → `save_qa` 保存三条问答（含一条失败）→ `save_feedback` 记录点踩 → `get_history` 游标分页 → `daily_stats` 按天统计（请求数、失败率、成本、平均与 p95 延迟）→ `export_eval_set` 把被点踩或失败的记录导出成评测集。
+这个 gate 用临时 DB，验证建表、幂等、游标分页和反馈外键。
 
-## 代码导读
+## 任务
 
-[sqlite_persistence.py](sqlite_persistence.py) 较长（约 530 行），按坑的编号阅读：【一】连接管理（`get_conn`、`tx`）→ 迁移（`migrate`）→ 读写函数（`save_qa`、`get_history`）→ 统计与导出（`daily_stats`、`export_eval_set`）→ `purge_old`。
+实现 `gate/starter.py` 的四个函数：
 
-## 练习
+| 函数 | 你要交付的行为 |
+|---|---|
+| `init_db` | 建 conversations/feedback，版本 1，幂等 |
+| `save_qa` | 写入；trace_id 重复返回已有 id |
+| `get_history` | 按 id 倒序；before_id 游标；sources 还原 list |
+| `save_feedback` | rating 1/-1；会话不存在报 `ValueError` |
 
-1. 运行两次，确认 `migrate()` 幂等；再用 `sqlite3` 命令行查看 `app.db` 里的表和索引。
-2. 用两个线程同时写入，观察 `database is locked` 是否出现，以及 `BUSY_TIMEOUT_MS` 的作用。
-3. 往 `get_history` 的数据里持续写入，对比游标分页与 `OFFSET` 分页的结果。
-4. 说明在什么条件下应该迁移到 PostgreSQL（9.5）。
+关键口径：
 
-## 运行与边界
+- `created_at` 用 UTC ISO8601（含 `+00:00`）。
+- `trace_id` 唯一；重复写入不新增记录。
+- 分页用 `id < before_id`，不用 OFFSET。
+- `sources` 存 JSON 字符串，读出转 list。
 
-- `app.db` 和导出的 `eval_set_from_prod.json` 都在本章目录，已被 `.gitignore` 忽略。
-- 日志里可能含用户的问题和回答，属于个人数据，需要脱敏和保留期限（见 5.7、`purge_old`）。
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | init 两次 | 版本 1，幂等 |
+| 2 | 写 3 条查 u1 | 2 条、倒序、sources=list |
+| 3 | before_id 分页 | 只返回更早一条 |
+| 4 | 同 trace 写两次 | 同 id、不新增 |
+| 5 | rating=0 | `ValueError` |
+| 6 | 不存在会话反馈 | `ValueError` |
+
+## 验收标准
+
+`gate_check.py` 的 4 项全部 PASS：
+
+- 建表/幂等、写入/历史/分页、trace 幂等、反馈校验。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 为什么 trace_id 要唯一？
+2. 游标分页比 OFFSET 好在哪？
+3. created_at 为什么必须存 UTC？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（4/4）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 5.4
+```
+
+对照时只回答：
+
+1. 参考实现的 `save_qa` 怎么做到幂等？
+2. 参考实现为什么用 thread-local 连接？
+3. 参考实现的 `daily_stats` 怎么算 p95？
+
+## 概念地图
+
+- **连接管理**：thread-local + 显式 close；`with conn` 不关连接。
+- **PRAGMA**：WAL/busy_timeout/foreign_keys。
+- **迁移**：user_version 幂等。
+- **幂等**：trace_id 唯一 + ON CONFLICT。
+- **游标分页**：id < before_id，避免漂移。
+- **UTC**：存储统一 UTC，展示再转时区。
+
+## 边界
+
+- gate 用临时 DB，不验证并发/迁移旧库/WAL 性能。
+- 通过 gate 只证明表结构/幂等/分页/反馈正确。
+- 生产多副本、迁移、p95 见参考实现与 7.x。

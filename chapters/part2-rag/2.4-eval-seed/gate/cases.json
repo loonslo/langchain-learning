@@ -1,0 +1,86 @@
+[
+  {
+    "id": "refund",
+    "question": "退款多久到账",
+    "expected_chunks": ["refund-1"],
+    "keywords": ["3个工作日"],
+    "should_refuse": false
+  },
+  {
+    "id": "shipping",
+    "question": "多久发货",
+    "expected_chunks": ["shipping-1"],
+    "keywords": ["48小时"],
+    "should_refuse": false
+  },
+  {
+    "id": "cross-source",
+    "question": "退款和发货分别多久",
+    "expected_chunks": ["refund-1", "shipping-1"],
+    "keywords": ["3个工作日", "48小时"],
+    "should_refuse": false
+  },
+  {
+    "id": "out-of-scope",
+    "question": "量子纠缠是什么",
+    "expected_chunks": [],
+    "keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "empty-question",
+    "question": "   ",
+    "expected_chunks": [],
+    "keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "partial",
+    "question": "退款超过7天怎么办",
+    "expected_chunks": ["refund-2"],
+    "keywords": ["7天"],
+    "should_refuse": false
+  },
+  {
+    "id": "one-miss",
+    "question": "退款多久",
+    "expected_chunks": ["refund-1", "refund-2"],
+    "keywords": ["3个工作日"],
+    "should_refuse": false
+  },
+  {
+    "id": "fabricated",
+    "question": "保修多久",
+    "expected_chunks": ["refund-1"],
+    "keywords": ["3个工作日"],
+    "should_refuse": false
+  },
+  {
+    "id": "no-cite",
+    "question": "发货时间",
+    "expected_chunks": ["shipping-1"],
+    "keywords": ["48小时"],
+    "should_refuse": false
+  },
+  {
+    "id": "refuse-with-source",
+    "question": "股票走势",
+    "expected_chunks": [],
+    "keywords": [],
+    "should_refuse": true
+  },
+  {
+    "id": "wrong-refusal",
+    "question": "退款到账",
+    "expected_chunks": ["refund-1"],
+    "keywords": ["3个工作日"],
+    "should_refuse": false
+  },
+  {
+    "id": "duplicate-cite",
+    "question": "退款规则",
+    "expected_chunks": ["refund-1", "refund-2"],
+    "keywords": ["3个工作日", "7天"],
+    "should_refuse": false
+  }
+]

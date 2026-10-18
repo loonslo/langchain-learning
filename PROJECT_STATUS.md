@@ -1,14 +1,32 @@
 ---
 project_id: langchain-learning
-updated: 2026-10-06
+updated: 2026-10-18
 status: active
 overview: 测试工程师转 AI 应用开发的章节课程、企业客服旗舰项目与岗位选修专项。
-progress: "课程书稿最新修订已提交推送，PDF 构建、机械和几何检查通过，并抽查代表页；未逐页目视或重跑课程测试。"
-next: "补真实模型、远端 CI/staging、容量、恢复与事故演练证据；核对第三方内容版权。"
+progress: "课件全量结构完成：82 章 + 29 步均有 v2 阶段标签、前置与索引，111 个 README 标签一致、断链 0；82 章全部有验收方式（75 章离线 gate + 7 章清单），29 步有总验收清单。各批参考解通过、默认骨架 0 通过，现有离线测试 28 passed、ruff 通过。未运行真实模型/外部服务，未部署，人工学习与真实环境验收未完成。"
+next: "进入真实学习/试教：按各章任务书执行 gate 或清单并记录失败；补真实模型、数据库、Docker/GPU、远端 CI/staging 证据；核对第三方内容版权与课程时长。"
 evidence:
   - README.md
   - TASKS.md
   - chapters/README.md
+  - docs/curriculum-v2.md
+  - docs/course-v2-structure-validation.md
+  - docs/gate-samples-validation.md
+  - docs/gate-b1-validation.md
+  - docs/gate-b2a-validation.md
+  - docs/gate-b2b-validation.md
+  - docs/gate-b3a-validation.md
+  - docs/gate-b3b-validation.md
+  - docs/gate-b4a-validation.md
+  - docs/gate-b4b-validation.md
+  - docs/gate-b4c-validation.md
+  - docs/gate-b4d-validation.md
+  - docs/gate-b5a-validation.md
+  - docs/gate-b5b-validation.md
+  - docs/gate-b6a-validation.md
+  - docs/gate-b6b-validation.md
+  - docs/gate-b6i-validation.md
+  - flagship-project/ACCEPTANCE.md
   - docs/course-restructure-validation.md
   - docs/course-book-validation.md
   - docs/course-review-validation.md
@@ -28,3 +46,25 @@ evidence:
 2026-09-30 按七项要求审查课程：订正断链、文字与代码不符和多处实际缺陷，补充注释与测试；随后按确认清理旧环境和历史输出，并修复拒答附引用与混合检索证据门槛。命令、结果和未验证边界见 `docs/course-review-validation.md`；课程内容调整不表示本人已学完。
 
 同日按本次修订重建 PDF 书稿并定版 v1.0（100 页、120 张图，机械与几何自检通过，书签 97 条）。订正的是与当前仓库对不上的说法：封面配套代码、环境依赖与自检命令、代码地图中的旧日编号与已删除目录、6 章两处实现的验收口径、7.7 端到端的流式表述。命令、核对结果和未做逐页目视检查的边界见 `docs/course-book-v1-validation.md`；书稿定版不表示本人已学完或真实环境验收通过。
+
+2026-10-18 完成课程路径 v2 提案：以 5 份岗位样本和 1 份行业能力地图对照现有 82 章 + 29 步，提出核心 58 章、约 321 小时的 12 周路径与阶段出口门，并列出 5.1 前置矛盾、3.9 后移、选修线代码血缘过重等结构问题。只是设计提案，未修改章节、未运行课程测试，不代表学习完成或真实环境验收。
+
+同日完成全量结构修复：82 章 + 29 个旗舰步骤共 111 个 README 写入 `v2 路径`；3.9 标明建议在 4.10 后学，5.2 改为 5.1 gate 之后，9.1/10.1 区分学习前置与运行代码血缘；新增映射与幂等工具，260 个 Markdown 断链 0。离线测试 28 passed，ruff 通过。未物理移动 3.9、未重排目录；命令与边界见 `docs/course-v2-structure-validation.md`。
+
+同日把 5 个样板章改为 Gate：L1.6 / L2.9 / L3.4 / L4.4 / L5.1 对应 2.5 / 2.4 / 3.3 / 4.5 / 5.1，新增闭卷骨架、离线验收脚本、故障注入和 gate workbook，重写 README。用临时参考解跑通 16/16、14/14、14/14、14/14、17/17；默认骨架 0 通过（预期），现有离线测试 28 passed，ruff 通过。未运行真实模型、未部署、未验证真实学习者从零实现；命令、结果与边界见 `docs/gate-samples-validation.md`。
+
+同日完成 B1 Gate 化：1.1–1.5、1.8 新增闭卷骨架与离线验收，覆盖请求/响应契约、流式收集、结构化解析、会话预算、工具回灌、CLI 控制流。临时参考解跑通 11/11、10/10、10/10、12/12、11/11、11/11；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未运行真实模型、未验证真实学习者；命令与边界见 `docs/gate-b1-validation.md`。
+
+同日完成 B2a Gate 化：2.1–2.3 覆盖加载/切分、向量化/索引、最小 RAG 的上下文/引用/拒答。临时参考解跑通 6/6、9/9、10/10；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实 embedding/模型；命令与边界见 `docs/gate-b2a-validation.md`。
+
+同日完成 B2b Gate 化：2.6–2.11 覆盖 PDF 溯源、切分策略、混合检索 RRF、查询改写、JSON 持久化、重排/recall@k。临时参考解跑通 9/9、7/7、7/7、9/9、9/9、8/8；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实 embedding/reranker/PDF；命令与边界见 `docs/gate-b2b-validation.md`。
+
+同日完成 B3a Gate 化：3.1、3.2、3.4、3.5 覆盖失败定位顺序、拒答/关键词指标、评测集 schema/覆盖、评测集合并与 RAGAS 行。临时参考解跑通 8/8、6/6、7/7、8/8；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实模型/RAGAS；命令与边界见 `docs/gate-b3a-validation.md`。
+
+同日完成 B3b：3.7 回归对比、3.10 失败诊断改为 gate，3.6 LangSmith 因外部服务改为清单验收。临时参考解跑通 8/8、5/5；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未运行真实模型/LangSmith/DeepEval；命令与边界见 `docs/gate-b3b-validation.md`。
+
+同日完成 B4a：4.1–4.4 覆盖 Agent 有界循环、LangGraph 线性/分支、recursion_limit、状态 reducer/fan-out。临时参考解跑通 8/8、4/4、4/4、5/5；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实模型/检查点；命令与边界见 `docs/gate-b4a-validation.md`。
+
+同日完成 B4b：4.6 节点可靠性、4.7 结构化路由改为 gate，覆盖降级/可重试/真实超时、枚举路由/意图分类。临时参考解跑通 7/7、4/4；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实模型；命令与边界见 `docs/gate-b4b-validation.md`。
+
+同日完成 B4c：4.8 规划与执行、4.9 可观测性、4.10 检查点与上下文改为 gate，覆盖计划解析/异常/超长、轨迹记录/汇总、会话隔离/副本/裁剪。临时参考解跑通 6/6、4/4、6/6；默认骨架 0 通过；现有测试 28 passed、断链 0、ruff 通过。未调用真实模型/checkpointer；命令与边界见 `docs/gate-b4c-validation.md`。

@@ -1,46 +1,105 @@
-# 4.4 状态合并与 Reducer：并行结果如何留下来
+# L4.3 状态与 Reducer · Gate（原 4.4）
 
 [全书目录](../../README.md) · [上一章 4.3](../4.3-branch-loop/README.md) · [下一章 4.5](../4.5-react-agent/README.md)
 
-- **目标**：理解节点返回的字段怎样合并进 state，会用 reducer 处理累加与并发写入。
-- **前置**：4.3。
-- **环境**：离线，不调用模型。
-- **命令**：`python tools/run_chapter.py 4.4`
+- **能力**：理解节点返回值如何合并进 state；用 reducer 处理累加、fan-out 和滑动窗口。
+- **v2 路径**：L4.3 / 核心（Gate；状态与 Reducer）
+- **前置**：4.3（分支与循环）。
+- **时间盒**：5 小时（1h 读 + 3h 实现 + 1h 分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `state_reducer.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part4-agents-langgraph/4.4-state-reducer/gate/gate_check.py
+```
 
-节点 `return` 一个 dict，它是怎么并进整张图的 state 的？默认规则是覆盖：`{"x": 新值}` 会直接替换旧值。单线程的线性图没问题，但一旦要累加（把每步结果 append 进列表），或者多个节点在同一步写同一个字段（fan-out），覆盖就会丢数据，甚至让图直接报错。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **reducer**：字段的合并函数，用 `Annotated[类型, reducer]` 声明。LangGraph 每次拿“旧值 + 节点新返回值”交给 reducer，得到合并后的新值。
-- 常见 reducer：不写 = 覆盖（后写入的胜出）；`operator.add` = 列表拼接或数字相加；`add_messages` = 消息专用合并；也可以自定义函数。
-- **并发写同一字段必须有 reducer**：没有 reducer 时，框架直接抛 `InvalidUpdateError`，不是静默丢数据，而是图跑不起来。
-- **reducer 只保证不丢，不保证有序**：并发分支完成的顺序没有定义；要稳定顺序，让产出带序号、消费端按序号排序。
-- `MessagesState` 不是魔法，就是 `{"messages": Annotated[list, add_messages]}`。
+默认合并是“覆盖”。一旦要累加或 fan-out，就会出问题：
 
-## 流程
+- 后一个节点把前一个节点的结果冲掉；
+- 多个分支同一步写同一字段，框架抛 `InvalidUpdateError`；
+- 自定义 reducer 不校验参数，窗口大小写错；
+- reducer 只保证“不丢”，却误以为“有序”；
+- 节点返回整个 state，覆盖掉别的字段。
 
-`state_reducer.py` 的五个演示：
+这个 gate 用最小图验证覆盖/累加/fan-out/滑动窗口。
 
-1. 【一】默认覆盖与 `operator.add` 累加的对比。
-2. 【二】fan-out：三个分支写同一字段，无 reducer 时报错，加上 `operator.add` 后正常。
-3. 【二·补】想要有序：产出带序号，最后按序号排序。
-4. 【三】`add_messages`：`MessagesState` 背后的合并逻辑。
-5. 【三·补】自定义 reducer：只保留最近 N 条的滑动窗口。
+## 任务
 
-## 代码导读
+实现 `gate/starter.py` 的五个函数：
 
-[state_reducer.py](state_reducer.py)：先看 `OverwriteState` 与 `AccumulateState` 两个 state 的区别，再看 `demo_fanout` 里为什么会抛 `InvalidUpdateError`，最后看 `keep_last_n`。
+| 函数 | 你要交付的行为 |
+|---|---|
+| `merge_lists` | 拼接 old+new，不修改输入 |
+| `keep_last_n` | 合并后保留最近 n 条；n<1 报错 |
+| `build_accumulate_graph` | log 用 `operator.add`，两步都保留 |
+| `build_fanout_graph` | results 用 `operator.add`，三分支都保留 |
+| `build_fanout_no_reducer` | results 不写 reducer，invoke 抛 `InvalidUpdateError` |
 
-## 练习
+关键口径：
 
-1. 运行后对照输出，解释【一】里覆盖与累加的结果为什么不同。
-2. 去掉 fan-out 里字段的 `Annotated[..., operator.add]`，确认会抛出 `InvalidUpdateError`。
-3. 写一个自定义 reducer：合并字典，同名键取较大值。
-4. 学完 4.14 后回来，把它的 fan-out 字段改成 `Annotated[list, operator.add]`，去掉手动拼接，验证并发下不再丢数据。
+- reducer 返回新列表，不原地修改。
+- `keep_last_n` 的 n 必须 >=1。
+- 累加图：`log == ["A","B"]`。
+- fan-out 图：3 条结果都保留。
+- 无 reducer 的 fan-out：抛 `InvalidUpdateError`，不是静默覆盖。
 
-## 运行与边界
+## 故障注入（必须亲手触发）
 
-- 本章只演示合并规则，不涉及真实的并发执行时序。
-- 4.5 的 `MessagesState` 就是 `add_messages` 的封装；4.14 的并行分支要用这里的 `operator.add`。
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | merge_lists(["a"],["b"]) | ["a","b"]，输入不变 |
+| 2 | keep_last_n 3 保留最近 | ["2","3","4"] |
+| 3 | n=0 | `ValueError` |
+| 4 | 累加图 | 两条 log |
+| 5 | fan-out | 三条 results |
+| 6 | 无 reducer fan-out | `InvalidUpdateError` |
+
+## 验收标准
+
+`gate_check.py` 的 5 项全部 PASS：
+
+- merge_lists、滑动窗口、累加图、fan-out、无 reducer 报错。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 覆盖和累加分别适合什么字段？
+2. 为什么 fan-out 写同一字段必须用 reducer？
+3. reducer 保证“不丢”但不保证“有序”，怎么补顺序？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（5/5）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 4.4
+```
+
+对照时只回答：
+
+1. 参考实现的 `AccumulateState` 和 `FanState` 用了什么 reducer？
+2. 参考实现为什么说无 reducer 的 fan-out 是“图跑不起来”而不是“静默丢数据”？
+3. 参考实现的有序 fan-out 用什么办法补顺序？
+
+## 概念地图
+
+- **reducer**：`Annotated[类型, 合并函数]`；旧值 + 新值 -> 新值。
+- **覆盖**：默认规则；后写胜出。
+- **operator.add**：列表拼接/数字相加。
+- **fan-out**：同一步多节点写同一字段，必须有 reducer。
+- **顺序**：reducer 不保证顺序；带序号、消费端排序。
+
+## 边界
+
+- gate 只验证合并规则，不涉及真实并发时序。
+- 通过 gate 只证明 reducer/图结构正确。
+- 4.5 的 MessagesState、4.14 的并行分支会复用本 gate 的规则。

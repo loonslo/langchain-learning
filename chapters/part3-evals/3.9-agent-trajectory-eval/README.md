@@ -1,41 +1,105 @@
-# 3.9 Agent 轨迹评测：结果正确还不够
+# L4.11 Agent 轨迹评测 · Gate（原 3.9）
 
 [全书目录](../../README.md) · [上一章 3.8](../3.8-prompt-ab-judge/README.md) · [下一章 3.10](../3.10-eval-report-failures/README.md)
 
-- **目标**：理解 Agent 评测为什么不能只看最终答案，学会按工具调用轨迹判定行为是否合规。
-- **前置**：3.2–3.5（RAG 评测）。
-- **环境**：离线；评测的是合成轨迹，不需要先会写 Agent，也不调用模型。
-- **命令**：`python tools/run_chapter.py 3.9`
+- **能力**：从轨迹提取工具调用；判定期望/禁用工具、完成、步数、最少调用；汇总通过率。
+- **v2 路径**：L4.11 / 核心（Gate；Agent 轨迹评测（建议 4.10 后学））
+- **前置**：3.2–3.5（RAG 评测）；建议 4.10/4.11 后学。
+- **时间盒**：5 小时（1h 读 + 3h 实现 + 1h 分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `trajectory_eval.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part3-evals/3.9-agent-trajectory-eval/gate/gate_check.py
+```
 
-Agent 的回答很体面，行为却可能违规：比如答案说“已请求审批”，过程中却偷偷调用了 `delete_database`。只看最终答案的 RAG 式评测判它通过，看轨迹才发现违规。回答体面不等于行为安全。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **RAG 评测看答案**：关键词、引用、拒答；只看回答了什么，不看怎么回答的。
-- **Agent 评测看轨迹**：该调的工具调了没有（`expected_ok`）、不该调的调了没有（`forbidden_ok`）、任务是否完成（`completed`）、有没有绕远路（`step_count` 与 `max_steps`）、是否真的用了工具（`min_tool_calls`）。
-- **评测集字段**：与 RAG 共享 `id`、`question`、`should_refuse`、`keywords`；独有 `expected_tools`、`forbidden_tools`、`max_steps`、`min_tool_calls`。
-- **合成轨迹**：本章的轨迹是手写的，用来讲清规则；真实系统需要采集真实的事件轨迹。
+回答体面不等于行为安全。Agent 评测最容易漏：
 
-## 流程
+- 只看最终答案，不看调了哪些工具；
+- 禁用工具在轨迹里出现，仍判通过；
+- 没有 final 也算完成；
+- 绕远路/死循环不告警；
+- 工具调用次数不足，答案其实是编的。
 
-1. 读 12 条 Agent 场景（工具选择、多步协作、安全屏障三类）。
-2. 对每条场景，用合成轨迹调用 `evaluate_trajectory`，得到各项判定与通过与否。
-3. 汇总：整体通过率、期望工具正确率、禁用工具规避率、任务完成率、未超步数比率等。
-4. `demonstrate_rag_vs_agent` 对照同一场景：RAG 式评测判通过，Agent 式评测判违规。
+这个 gate 用合成轨迹，验证工具选择、安全屏障、完成度和步数。
 
-## 代码导读
+## 任务
 
-[trajectory_eval.py](trajectory_eval.py)：先看开头对两种评测差异的说明和评测集字段表，再看 `evaluate_trajectory` 里的各项判定，最后看 `demonstrate_rag_vs_agent`。
+实现 `gate/starter.py` 的三个函数：
 
-## 练习
+| 函数 | 你要交付的行为 |
+|---|---|
+| `extract_tool_names` | 提取 ai 步的 tool_calls[].name，保持顺序 |
+| `evaluate_trajectory` | 计算 expected/forbidden/completed/steps/min_calls/keyword/passed |
+| `summarize_trajectories` | 汇总通过率/期望/禁用/完成率；空集全 0 |
 
-1. 找到 `agent_041`，对比 RAG 式与 Agent 式评测的结论，解释为什么会相反。
-2. 给某个场景新增一个禁用工具，改一条合成轨迹让它违规，确认判定为失败。
-3. 想一想：真实 Agent 的轨迹应从哪里采集（日志、trace）？哪些字段必须记录？（4.9 讨论可观测性。）
+关键口径：
 
-## 运行与边界
+- `expected_ok`：期望工具全部出现；`forbidden_ok`：禁用工具一个都不出现。
+- `completed`：存在 `role="final"`。
+- `step_count` 只数 ai 步；`tool_call_count` 只数有 tool_calls 的 ai 步。
+- `step_count > max_steps` 超限；`tool_call_count >= min_tool_calls` 才达标。
+- `passed` 要求五项全满足；关键词只是参考分，不参与 passed。
 
-- 合成轨迹只能证明评测规则本身正确，不代表真实 Agent 的表现。
-- 关键工具调用的顺序、参数和副作用还需要更细的检查，8.6 继续展开。
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 正常轨迹 | passed，工具提取正确 |
+| 2 | 调禁用工具 | forbidden_ok=False，failed |
+| 3 | 缺期望工具 | expected_ok=False，failed |
+| 4 | 无 final | completed=False，failed |
+| 5 | ai 步超过 max_steps | 超限，failed |
+| 6 | 工具调用不足 + 关键词部分命中 | min_calls=False、keyword=2/3 |
+| 7 | 汇总 good+bad | pass_rate=0.5 |
+
+## 验收标准
+
+`gate_check.py` 的 7 项全部 PASS：
+
+- 工具提取、正常、禁用、缺期望、未完成/超步数、最少调用/关键词、汇总。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 为什么禁用工具检查比关键词检查更重要？
+2. `passed` 为什么不把 keyword_score 算进去？
+3. 真实轨迹从哪里采集？哪些字段必须记录？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（7/7）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 3.9
+```
+
+对照时只回答：
+
+1. 参考实现的 `evaluate_trajectory` 和你的判定项一致吗？
+2. 参考实现的 `agent_041` 为什么 RAG 判通过、Agent 判违规？
+3. 参考实现的 `step_count` 和 `tool_call_count` 有什么区别？
+
+## 概念地图
+
+- **轨迹**：思考-行动过程，不只是最终答案。
+- **期望/禁用工具**：该调的调了、不该调的没调。
+- **完成度**：有 final 才算完成。
+- **步数**：绕远路/死循环告警。
+- **最少调用**：确保真的用了工具，不是编答案。
+- **安全屏障**：禁用工具是 Agent 评测独有维度。
+
+## 边界
+
+- gate 用合成轨迹，不采集真实 Agent。
+- 通过 gate 只证明评测规则正确，不代表真实 Agent 表现。
+- 工具顺序/参数/副作用见 8.6。

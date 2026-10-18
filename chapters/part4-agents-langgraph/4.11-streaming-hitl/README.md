@@ -1,40 +1,101 @@
-# 4.11 流式与人工介入：暂停在需要决定的位置
+# L4.10 流式与人工介入 · Gate（原 4.11）
 
 [全书目录](../../README.md) · [上一章 4.10](../4.10-checkpoint-context/README.md) · [下一章 4.12](../4.12-tool-safety-search/README.md)
 
-- **目标**：用流式输出观察图的每一步，用 `interrupt` 在高风险动作前暂停等人确认。
-- **前置**：4.10。
-- **环境**：离线，不调用模型；HITL 部分需要你在终端输入 `yes` / `no`。
-- **命令**：`python tools/run_chapter.py 4.11`
+- **能力**：判断哪些动作必须人工审批；把审批输入归一化为 approved/cancelled。
+- **v2 路径**：L4.7 / 核心（Gate；流式与 HITL）
+- **前置**：4.10（检查点）。
+- **时间盒**：5 小时（1h 读 + 3h 实现 + 1h 分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `streaming_hitl.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part4-agents-langgraph/4.11-streaming-hitl/gate/gate_check.py
+```
 
-长任务让用户干等，体验差，也看不出走到了哪一步。另一方面，删除数据、发邮件、付款这类高风险动作，不能让模型自己拍板，应先暂停，把动作交给人确认。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **streaming**：`app.stream()` 边执行边吐出每一步（走到哪个节点、state 怎么变），既改善体验，也方便观察。`stream_mode="updates"` 返回每个节点的增量更新。
-- **`interrupt()`**：在节点里调用，图暂停并把待确认的动作抛给人；`Command(resume=值)` 恢复，`interrupt()` 处得到的就是这个值。
-- **HITL 依赖 checkpointer**：暂停要能存档、再恢复，所以 `compile` 必须传 `checkpointer`。“暂停”存在检查点里，不在进程里：图停在 `interrupt` 之后，`invoke` 已经返回，等待 `input()` 的只是普通 Python 代码。所以审批人也可以是另一个进程或网页（capstone 的 HITL API 就是这样做的）。
-- **两道防线**：`interrupt` 等人审批，加上危险工具只做模拟，绝不接真实的删除、发送、支付权限。
+HITL 不是“弹个确认框”。最容易出这些错：
 
-## 流程
+- 删除/发送/付款没被识别为高风险；
+- 金额阈值写反（>= 和 > 混淆）；
+- 审批输入 `YES`/`no ` 没归一化；
+- 非法输入被当成取消/通过；
+- 审批逻辑和流式/检查点耦合，无法单测。
 
-1. `demo_streaming`：流式打印每个节点的增量更新，能看到图停在哪一步等人。
-2. `run_hitl`：第一次 `invoke` 运行到 `interrupt` 停下，返回里带 `__interrupt__` → 终端询问你 → 用 `Command(resume=你的输入)` 再 `invoke` 一次继续。输入 `yes` 才执行（模拟）删除，否则取消。
-3. 依次审批两个任务（`report.docx`、`db_backup.sql`）。
+这个 gate 把审批判断抽成纯函数，验证规则和边界。
 
-## 代码导读
+## 任务
 
-[streaming_hitl.py](streaming_hitl.py)：先看 `confirm` 节点里的 `interrupt` 和返回值，再看 `run_hitl` 怎样两次调用同一个 `thread_id`。
+实现 `gate/starter.py` 的两个函数：
 
-## 练习
+| 函数 | 你要交付的行为 |
+|---|---|
+| `needs_approval` | 危险动作或金额>阈值 -> True；非法输入报错 |
+| `resolve_approval` | yes -> approved；no -> cancelled；其他报错 |
 
-1. 对第一个任务输入 `yes`，对第二个输入 `no`，比较结果。
-2. 把 `confirm` 改成“只有金额大于 1000 才 `interrupt`，否则直接放行”。
-3. 用不同的 `thread_id` 同时开两个任务，验证它们互不影响。
+关键口径：
 
-## 运行与边界
+- 危险动作：`delete/send_email/pay`。
+- 金额必须 `> threshold`（默认 1000）；等于阈值不审批。
+- `action` 非空；`amount < 0` -> `ValueError`。
+- 审批输入大小写/空白不敏感；其他值 -> `ValueError`。
 
-- 删除是模拟的，只修改 state，不碰真实文件。
-- 内存检查点不跨进程；有副作用的工具在恢复后可能重复执行，需要幂等性（5.4、7.4）。
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | delete/send_email/pay | True |
+| 2 | search | False |
+| 3 | 1001 / 1000 / None | True / False / False |
+| 4 | 空 action / 负金额 | `ValueError` |
+| 5 | YES / " no " | approved / cancelled |
+| 6 | maybe/空 | `ValueError` |
+
+## 验收标准
+
+`gate_check.py` 的 4 项全部 PASS：
+
+- 危险动作、金额阈值、非法输入、审批归一化。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 哪些动作必须审批？谁定这个清单？
+2. 为什么审批输入必须严格归一化？
+3. 审批通过后，有副作用的工具如何避免重复执行？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（4/4）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 4.11
+```
+
+对照时只回答：
+
+1. 参考实现的 `confirm` 在 `interrupt` 前做了什么？
+2. `Command(resume=...)` 恢复时，`interrupt()` 的返回值是什么？
+3. 参考实现为什么只模拟删除，不接真实删除？
+
+## 概念地图
+
+- **streaming**：边执行边吐步骤，改善体验/可观测。
+- **interrupt**：高风险节点暂停，把动作抛给人。
+- **checkpointer**：暂停存档/恢复的前提。
+- **审批规则**：危险动作 + 金额阈值；白名单/清单要可审计。
+- **幂等**：恢复后副作用工具不能重复执行。
+
+## 边界
+
+- gate 只测审批纯函数，不跑 LangGraph interrupt/stream。
+- 通过 gate 只证明规则正确，不证明真实暂停恢复。
+- 检查点/幂等见参考实现与 5.4/7.4。

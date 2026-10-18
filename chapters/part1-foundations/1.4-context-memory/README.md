@@ -1,43 +1,107 @@
-# 1.4 多轮上下文：记住谁说过什么
+# L1.4 上下文与记忆 · Gate（原 1.4）
 
 [全书目录](../../README.md) · [上一章 1.3](../1.3-structured-output/README.md) · [下一章 1.5](../1.5-tool-calling/README.md)
 
-- **目标**：让多轮对话记住上文，并用 `session_id` 隔离不同会话。
-- **前置**：1.1。
-- **环境**：调用真实模型。
-- **命令**：`python tools/run_chapter.py 1.4`
+- **能力**：按会话隔离历史；在字符预算内保留最近上下文；system 消息永不被裁掉。
+- **v2 路径**：L1.4 / 核心（Gate；上下文与记忆）
+- **前置**：1.1（一次调用）。
+- **时间盒**：5 小时（1h 读 + 3h 实现 + 1h 故障分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `context_memory.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part1-foundations/1.4-context-memory/gate/gate_check.py
+```
 
-第二句问“我刚才说我在学什么？”，模型答不出来：每次 `invoke` 都是独立的请求，它不知道上一句。要让对话连贯，必须由程序把历史再发给模型。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **模型无状态**：所谓记忆，是每次请求都把历史消息重新放进 prompt。历史越长，成本和上下文占用越大。
-- **`MessagesPlaceholder`**：prompt 中预留的“历史对话”插槽，变量名为 `history`。
-- **`RunnableWithMessageHistory`**：自动读取历史填进插槽，调用结束后再把这一轮写回历史。
-- **`session_id`**：会话标识。同一个 id 共用一段历史，换 id 就是互不相干的新会话；不隔离用户和会话，记忆就会串台。
-- **`InMemoryChatMessageHistory`**：历史存在内存里，程序退出即丢失。
+多轮对话最容易被忽略的是“历史越来越长”：
 
-## 流程
+- 不同用户/会话串台；
+- 历史无限增长，token 成本和延迟失控；
+- 裁剪时把 system 规则裁掉，模型开始不守约束；
+- 裁剪后顺序乱了，模型看到错乱的对话；
+- 返回历史列表的引用，外部一改就污染内部状态。
 
-1. 在 prompt 中加入 `MessagesPlaceholder("history")` 与本轮的 `{question}`。
-2. 用字典 `store` 按 `session_id` 保存各会话的历史，`get_session_history` 负责取出或新建。
-3. 用 `RunnableWithMessageHistory` 包住基础链，指明输入变量 `question` 与历史变量 `history`。
-4. 同一个 `session_id` 连问三轮，观察第三轮能否答出第一轮说过的名字。
+这个 gate 把记忆拆成 **会话隔离 + 历史副本 + 预算裁剪**，用固定字符预算做确定性验收。
 
-## 代码导读
+## 任务
 
-[context_memory.py](context_memory.py)：先看 prompt 里的插槽，再看 `store` 和 `get_session_history`，最后看 `RunnableWithMessageHistory` 的两个 key 参数与 `config`。
+实现 `gate/starter.py` 的两个部分：
 
-## 练习
+| 部分 | 你要交付的行为 |
+|---|---|
+| `SessionMemory` | `add` 校验 session/role/content；`get` 返回副本；`clear` 幂等 |
+| `trim_history` | system 永远保留；非 system 从最新往前选，遇到放不下就停；不改输入、不乱序 |
 
-1. 用两个不同的 `session_id` 各聊几句，验证两段记忆互不影响。
-2. 三轮对话之后换成新的 `session_id`，再问“我叫什么名字？”，观察模型如何回答。
-3. 估算聊到第 20 轮时每次请求要带多少历史，思考何时需要截断或摘要（4.10 讨论上下文管理）。
+关键口径：
 
-## 运行与边界
+- `role` 只允许 `system` / `user` / `assistant`；不合法抛 `MemoryError`。
+- `get` 返回副本；调用方修改返回值不能影响内部历史。
+- `max_chars < 0` 抛 `ValueError`；空列表返回 `[]`。
+- 字符预算按 `len(content)` 计算；不截断单条消息。
+- system 消息可以超预算，但必须保留并放在最前。
+- 非 system 消息从最新往前选；第一条放不下就停止（不跳过去选更旧的）。
 
-- 会调用真实模型并产生少量费用。
-- 内存历史不持久，也没有长度上限；生产环境用 LangGraph 的 checkpoint（4.10）等方案。
-- `RunnableWithMessageHistory` 在新版会提示弃用警告，脚本已忽略；它在这里只用来讲清历史怎样进入 prompt。
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 两个 session 各写一条 | 互不串台 |
+| 2 | 修改 `get()` 返回的列表 | 内部历史不变 |
+| 3 | `role="tool"` / 空 session / content 非字符串 | `MemoryError` |
+| 4 | 预算为 0 | 只保留 system |
+| 5 | system 本身超预算 | 仍然保留 |
+| 6 | 最近一条放不下 | 停止，不选更旧的小消息 |
+| 7 | 负预算 | `ValueError` |
+| 8 | 消息缺 role/content | `ValueError` |
+| 9 | 裁剪后检查原输入 | 不被修改 |
+
+## 验收标准
+
+`gate_check.py` 的 12 项全部 PASS：
+
+- 会话：追加/读取、隔离、副本、清空、非法输入。
+- 裁剪：预算足够、超预算保留最近、system 保留、顺序/不修改、空历史、负预算、非法消息。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 为什么 `get` 要返回副本？返回内部列表会出什么问题？
+2. system 超预算时为什么仍保留？如果业务要求硬预算，怎么处理？
+3. 真实 token 预算和 `len(content)` 有什么区别？生产里应怎么估？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（12/12）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 1.4
+```
+
+对照时只回答：
+
+1. 参考实现用 `RunnableWithMessageHistory` 自动存历史；它有没有预算裁剪？
+2. 参考实现的 `session_id` 隔离靠什么？你的 `SessionMemory` 靠什么？
+3. 参考实现的历史在内存里，程序退出就丢；如果要持久化，最小改动是什么？
+
+## 概念地图
+
+- **模型无状态**：记忆是程序每次把历史重新放进 prompt。
+- **会话隔离**：session_id 相同的才共享历史；不隔离会串台。
+- **历史副本**：对外返回副本，避免外部修改内部状态。
+- **预算裁剪**：保留最近上下文，system 规则优先；裁剪策略要可解释。
+- **持久化**：内存历史程序退出即丢；生产用 checkpoint/数据库。
+
+## 边界
+
+- gate 用字符预算做确定性验收，不是真实 token 计数。
+- 通过 gate 只证明会话/裁剪结构正确，不验证真实多轮回答质量。
+- 摘要、长期记忆、跨会话偏好见 L4.6。

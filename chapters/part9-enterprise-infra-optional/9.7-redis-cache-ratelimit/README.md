@@ -1,58 +1,66 @@
-# 9.7 Redis 缓存与限流：先定义失效条件
+# L5.2 扩展：Redis 缓存/限流 · Gate（原 9.7）
 
 [全书目录](../../README.md) · [上一章 9.6](../9.6-readonly-sql-explain/README.md) · [下一章 9.8](../9.8-vectorstore-selection/README.md)
 
-- **目标**：Redis 只做可失效的缓存与限流，不当数据库用：缓存键必须含租户、ACL/知识版本、模型和规范化问题，身份或知识变化后旧答案不能继续命中。
-- **前置**：9.6（其累积代码）。
-- **环境**：离线测试，真实服务另验；累积项目，先还原再运行。
-- **命令**：`python tools/materialize.py enterprise 9.7-redis-cache-ratelimit`，进入 `.build/enterprise/9.7-redis-cache-ratelimit/enterprise-support` 后运行 `python -m pytest -q`
-
-## 问题
-
-上一版政策的回答不能在更新后继续缓存给用户，其他租户也不能命中这份结果。缓存范围与版本先定义好，Redis 才能作为安全的加速层。
-
-## 概念
-
-CacheScope 包含租户和版本边界；TTL 控制过期；限流限制一定窗口内的调用。`acl_version` 必须能区分不同权限视图（例如角色集合的哈希），否则权限不同的用户会共用同一条缓存答案。缓存可失效，业务真相不能只保存在缓存里。
-
-## 流程
-
-1. 根据可信身份和知识配置构建键。
-2. 读取或写入带 TTL 的结果。
-3. 执行窗口限流。
-4. Redis 不可用时：限流失败关闭（抛 `RuntimeError`）；缓存读写目前直接抛出原始异常，是否降级为未命中由调用方决定。
-
-## 本章交付
-
-- `redis_store.py`：TTL 缓存和固定窗口限流的 Redis 契约。
-- `tests/test_redis_store.py`：验证租户隔离、版本失效和 Redis 故障不放开限流。
-
-## 代码导读
-
-redis_store.py 先读 CacheScope 与 RedisAnswerCache，再读 FixedWindowRateLimiter 的计数和失效行为。
-
-实现文件：
-
-- [redis_store.py](src/enterprise_support/redis_store.py)
-
-## 练习
-
-保持问题相同但改变租户或知识版本，预测缓存是否命中；模拟 Redis 故障，检查限流是否被意外放开。
-
-在 [学习记录](workbook.md) 写下预测，运行后补实际结果，并记录一次失败或边界情形。
-
-## 运行与验收
+- **能力**：按租户/知识版本/权限版本/模型隔离缓存键；TTL 缓存；固定窗口限流；后端故障失败关闭。
+- **v2 路径**：L5.2 / 选读（Gate；Redis 缓存/限流）
+- **前置**：5.3（缓存）、5.7（权限）。
+- **时间盒**：5 小时（1h 读 + 3h 实现 + 1h 分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `src/enterprise_support/redis_store.py`。
+- **验收命令**：
 
 ```bash
-python tools/materialize.py enterprise 9.7-redis-cache-ratelimit
-cd .build/enterprise/9.7-redis-cache-ratelimit/enterprise-support
-python -m pytest -q
+python chapters/part9-enterprise-infra-optional/9.7-redis-cache-ratelimit/gate/gate_check.py
 ```
 
-本章是累积项目，先还原完整状态再运行测试，不要把本章新增文件当作独立应用。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
+
+## 为什么做这个 gate
+
+缓存/限流最容易出这些错：
+
+- 缓存键不含租户/权限版本，跨用户串答案；
+- 问题空白不同导致重复缓存；
+- 不设 TTL，旧答案永不过期；
+- 限流 key 不含用户/窗口，互相影响；
+- Redis 故障时“放行”，等于没有限流。
+
+这个 gate 用假 Redis，验证键隔离、TTL、限流和失败关闭。
+
+## 任务
+
+实现 `cache_key`、`RedisAnswerCache`、`FixedWindowRateLimiter`：
+
+| 接口 | 你要交付的行为 |
+|---|---|
+| `cache_key` | 作用域+合并空白问题 SHA-256；前缀 answer: |
+| `RedisAnswerCache` | get 解码 bytes；set 带 ex=ttl |
+| `FixedWindowRateLimiter` | incr + 首次 expire；<=limit 放行；异常 RuntimeError |
+
+关键口径：
+
+- scope 四项任一变化 -> 新键。
+- 问题合并连续空白后参与哈希。
+- Redis 异常不能放开限流。
+- 限流 key 含 tenant/user/window。
+
+## 故障注入（必须亲手触发）
+
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 租户/版本变化 | 键不同 |
+| 2 | 空白不同 | 同键 |
+| 3 | 未命中/命中 | None/answer |
+| 4 | set | ex=ttl |
+| 5 | bytes 值 | decode |
+| 6 | 连续 3 次 limit=2 | 前 2 放行，第 3 拒绝 |
+| 7 | Redis 故障 | RuntimeError |
+
+## 验收标准
+
+`gate_check.py` 的 5 项全部 PASS；通过后写 workbook 三个问题。
 
 ## 边界
 
-离线替身验证协议与边界，不代表真实 Redis 并发、原子性和容量已通过验收。
-
-生产可改为滑动窗口、令牌桶或网关限流；无论算法如何，Redis 故障时不得静默允许无限请求。
+- 假 Redis，不验证真实 Redis/Lua 原子性。
+- 通过 gate 不证明缓存命中率/限流精度。

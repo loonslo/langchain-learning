@@ -1,54 +1,63 @@
-# 5.5 容器与运行配置：交付的不只是代码
+# L5.7 容器与配置 · Gate（原 5.5）
 
 [全书目录](../../README.md) · [上一章 5.4](../5.4-sqlite-persistence/README.md) · [下一章 5.6](../5.6-ollama-inference/README.md)
 
-- **目标**：把 5.1 的服务打包成 Docker 镜像，并理解交付物里除了代码还有什么。
-- **前置**：5.1。
-- **环境**：生成示例文件离线运行；构建和运行容器需要本机安装 Docker。
-- **命令**：`python tools/run_chapter.py 5.5`
+- **能力**：生成生产可用的 Dockerfile/.dockerignore；审计缺 EXPOSE、明文密钥、ADD 远端、root 运行。
+- **v2 路径**：L5.7 / 核心（Gate；容器与配置）
+- **前置**：5.1（服务）。
+- **时间盒**：4 小时（1h 读 + 2h 实现 + 1h 分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `docker_examples.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part5-production/5.5-docker-packaging/gate/gate_check.py
+```
 
-“在我机器上能跑”不算交付。Docker 把代码、依赖和运行环境装进一个镜像，到哪台机器都一样运行。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **Dockerfile 三段式**：装依赖（单独一层，依赖没变时能用缓存）→ 拷代码 → 定启动命令。
-- **分层缓存**：先 `COPY requirements.txt` 再安装，依赖没变就不重装，构建更快。
-- **监听地址**：容器里的服务必须监听 `0.0.0.0`，宿主机才访问得到；本机开发默认只监听 `127.0.0.1`。
-- **密钥不进镜像**：用 `--env-file .env` 注入；`.dockerignore` 排除 `.env`、缓存和虚拟环境。
-- **大模型文件不进镜像**：本地 embedding 模型较大，用挂载卷提供，并用 `EMBED_MODEL_PATH` 告诉程序路径；或改用 API embedding。
-- **就绪与存活**：没有挂载模型时，`/ready` 返回 503，`/health` 仍然存活（5.1）。
+“本机能跑”不等于能交付。容器配置常见问题：
 
-## 流程
+- 依赖层和代码层顺序反了，每次改代码都重装依赖；
+- 忘了 EXPOSE/CMD，容器起不来；
+- 把 `.env`、密钥打进镜像；
+- 用 ADD 拉远端 URL，构建不可复现；
+- 以 root 运行，逃逸风险高。
 
-1. 运行本章脚本，在本章目录生成 `Dockerfile.example` 和 `.dockerignore.example`。
-2. 从仓库根目录构建镜像（构建上下文是仓库根目录，用 `-f` 指定本章的 Dockerfile，并使用根目录的 `.dockerignore`）：
+这个 gate 用文本渲染和审计，不要求本机装 Docker。
 
-   ```bash
-   docker build -f chapters/part5-production/5.5-docker-packaging/Dockerfile.example -t rag-app .
-   ```
+## 任务
 
-3. 运行容器：
+实现 `gate/starter.py`：
 
-   ```bash
-   docker run -p 8000:8000 --env-file .env -v <本机模型目录>:/models -e EMBED_MODEL_PATH=/models/bge-small-zh-v1___5 rag-app
-   ```
+| 函数 | 你要交付的行为 |
+|---|---|
+| `render_dockerfile` | FROM/WORKDIR/分层 COPY/pip --no-cache-dir/EXPOSE/非 root USER/CMD 0.0.0.0 |
+| `render_dockerignore` | 排除 .env/.git/.venv/__pycache__ |
+| `audit` | 报缺 FROM/CMD/EXPOSE/USER、明文密钥、ADD 远端 |
 
-4. 访问 http://127.0.0.1:8000/docs 验证。
+关键口径：
 
-## 代码导读
+- 先 COPY requirements 再 RUN pip，最后 COPY . .。
+- 不出现 `sk-`、`API_KEY=`、`.env` 明文。
+- `audit` 对生成的 Dockerfile 返回 []。
 
-[docker_examples.py](docker_examples.py)：`DOCKERFILE` 和 `DOCKERIGNORE` 两个模板，`write_examples` 负责写出文件。模板里的注释解释了每一步的原因。
+## 故障注入（必须亲手触发）
 
-## 练习
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 生成的 Dockerfile | 结构齐全、顺序正确 |
+| 2 | 扫描密钥 | 无 sk-/API_KEY/.env |
+| 3 | .dockerignore | 排除敏感/缓存 |
+| 4 | audit(生成文件) | [] |
+| 5 | 缺 EXPOSE + API_KEY + ADD http | 全部报出 |
 
-1. 本机装好 Docker，把服务真正构建成镜像并运行，用 `curl` 调用 `/health` 和 `/chat`。
-2. 不挂载模型运行一次，观察 `/ready` 的状态码。
-3. 检查镜像里是否含有 `.env`（不应该有）。
+## 验收标准
 
-## 运行与边界
+`gate_check.py` 的 5 项全部 PASS；通过后写 workbook 三个问题。
 
-- 示例只是模板，没有在本仓库里完成构建验证；实际构建可能需要按环境调整依赖。
-- 仓库根目录另有 `Dockerfile`，用于 capstone 的企业版服务，二者用途不同。
-- 镜像没有做漏洞扫描、多阶段构建和非 root 运行，生产还需要补上。
+## 边界
+
+- gate 只做文本审计，不构建镜像/不跑容器。
+- 通过 gate 不证明镜像可运行；真实构建需 Docker。

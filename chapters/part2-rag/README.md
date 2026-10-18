@@ -4,16 +4,16 @@
 
 先修：第 1 篇。
 
-- [2.1 文档加载与切分：资料如何进入系统](2.1-load-split/README.md)（离线）
-- [2.2 向量化与召回：先找到可能相关的片段](2.2-embed-retrieve/README.md)（本地 embedding）
-- [2.3 最小 RAG：让回答依据检索资料](2.3-minimal-rag/README.md)（真实模型 + 本地 embedding）
-- [2.4 RAG 评测种子：从五个问题开始](2.4-eval-seed/README.md)（离线）
-- [2.5 裸 SDK 与循环：看清框架封装了什么](2.5-raw-sdk-rag-agent-loop/README.md)（离线可读，有密钥时调用模型）
-- [2.6 PDF 与来源溯源：答案要能回到原文](2.6-pdf-sources/README.md)（真实模型 + 本地 embedding）
-- [2.7 切分策略：让完整事实留在片段里](2.7-chunk-strategy/README.md)（本地 embedding）
-- [2.8 混合检索：同时照顾语义和精确词](2.8-hybrid-search/README.md)（本地 embedding）
-- [2.9 查询改写：把用户的话转成更好检索的问题](2.9-query-rewrite/README.md)（真实模型 + 本地 embedding）
-- [2.10 向量库持久化：下次启动不再从头建立](2.10-chroma-persist/README.md)（本地 embedding）
-- [2.11 重排与多模态：增加能力后仍要保留证据](2.11-multimodal-rerank/README.md)（本地 reranker，多模态部分选做）
+- [2.1 · L2.1 加载与切分（Gate）](2.1-load-split/README.md)（离线 gate）
+- [2.2 · L2.2 向量化与召回（Gate）](2.2-embed-retrieve/README.md)（离线 gate；参考实现需本地 embedding）
+- [2.3 · L2.3 最小 RAG（Gate）](2.3-minimal-rag/README.md)（离线 gate；参考实现需真实模型 + embedding）
+- [2.4 · L2.9 RAG 评测基线（Gate）](2.4-eval-seed/README.md)（离线 gate）
+- [2.5 · L1.6 手写 Harness（Gate）](2.5-raw-sdk-rag-agent-loop/README.md)（离线 gate，参考实现可选真实模型）
+- [2.6 · L2.3 扩展：PDF 与来源（Gate）](2.6-pdf-sources/README.md)（离线 gate；参考实现需真实模型 + embedding）
+- [2.7 · L2.4 切分策略（Gate）](2.7-chunk-strategy/README.md)（离线 gate；参考实现需本地 embedding）
+- [2.8 · L2.5 混合检索（Gate）](2.8-hybrid-search/README.md)（离线 gate；参考实现需本地 embedding）
+- [2.9 · L2.6 查询改写（Gate）](2.9-query-rewrite/README.md)（离线 gate；参考实现需真实模型 + embedding）
+- [2.10 · L2.7 向量库持久化（Gate）](2.10-chroma-persist/README.md)（离线 gate；参考实现需本地 embedding）
+- [2.11 · L2.8 重排与多模态（Gate）](2.11-multimodal-rerank/README.md)（离线 gate；参考实现需 reranker，多模态选做）
 
 [返回全书目录](../README.md)

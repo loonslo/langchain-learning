@@ -1,42 +1,105 @@
-# 1.1 首次模型调用：让一条请求往返
+# L1.1 一次调用 · Gate（原 1.1）
 
 [全书目录](../../README.md) · [上一章 0.2](../../part0-setup/0.2-learning-workflow/README.md) · [下一章 1.2](../1.2-control-output/README.md)
 
-- **目标**：调用一次模型并读懂返回对象，再用“模板 + 模型 + 解析器”组成一条链。
+- **能力**：看懂一次模型往返的请求、响应、token 和失败出口；把失败转成可读结果。
+- **v2 路径**：L1.1 / 核心（Gate；一次调用）
 - **前置**：0.1（自检通过，`.env` 里有 `DEEPSEEK_API_KEY`）。
-- **环境**：调用真实模型。
-- **命令**：`python tools/run_chapter.py 1.1`
+- **时间盒**：4 小时（1h 读 + 2h 实现 + 1h 失败分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `first_call.py`。
+- **验收命令**：
 
-## 问题
+```bash
+python chapters/part1-foundations/1.1-first-call/gate/gate_check.py
+```
 
-先做一个最小的应用：把一句问题交给模型，显示回复。它像一次普通的接口调用，但返回的是模型根据上下文生成的文字。看清这次往返，后面才能理解提示词、检索和 Agent 各增加了什么。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 概念
+## 为什么做这个 gate
 
-- **模型客户端**：`ChatOpenAI` 保存模型名、地址和密钥。DeepSeek 兼容 OpenAI 的接口格式，所以只需要改 `model` 和 `base_url`。
-- **`invoke`**：发起一次调用并等待结果，返回的是消息对象。其中 `.content` 才是要展示的正文，其余是元数据。
-- **提示词模板**：`ChatPromptTemplate` 把固定说明（system）和每次变化的问题（human，含 `{question}` 占位符）分开管理。
-- **LCEL 链**：`prompt | llm | parser` 里的 `|` 表示左边的输出交给右边作输入；`StrOutputParser` 把消息对象取成字符串。
+第一次调用最容易“跑通就以为会了”。真实服务里更常见的是：密钥错、请求超时、返回空内容、usage 缺失、上游返回非预期结构。如果你只写过 `print(response.content)`，这些情况都会变成线上事故。
 
-## 流程
+这个 gate 让你把一次调用拆成三层：
 
-1. 从 `.env` 读取密钥，创建 `llm`。
-2. 直接 `llm.invoke("…")`，观察返回的是消息对象，取 `.content`。
-3. 定义模板和解析器，用 `|` 连成 `chain`，传入 `{"question": ...}` 调用。
+1. **构造请求**：system / user 角色和顺序。
+2. **解析响应**：content、token、finish_reason；缺失时怎么记。
+3. **失败出口**：超时、模型异常、空响应、坏结构，都返回可读结果而不是堆栈。
 
-## 代码导读
+## 任务
 
-[first_call.py](first_call.py)：先看 `llm` 和第一次 `invoke`，再看 `prompt`、`parser`、`chain`。本章直接创建 `ChatOpenAI`，让连接配置一眼可见；第 2 篇起统一改用 `common.py` 的 `get_llm()`。
+实现 `gate/starter.py` 的三个函数：
 
-## 练习
+| 函数 | 你要交付的行为 |
+|---|---|
+| `build_messages` | 生成 system + user 两条消息；空参数抛 `ValueError` |
+| `parse_response` | 提取 content / input_tokens / output_tokens / finish_reason；非法结构抛 `CallError` |
+| `call_once` | 构造、调用、解析；超时/异常/空响应/坏结构都转成 `error` 字段 |
 
-1. 先预测直接调用与 chain 调用的返回类型，各运行一次验证。
-2. 把 system 改成“你是一个资深测试工程师”，只改这一处，观察回答风格的变化。
-3. 用一个错误的 `DEEPSEEK_API_KEY` 环境变量临时运行一次（不要改 `.env`），观察认证错误出现在哪一步。遇到连接或认证错误，先回到 0.1 检查环境，不要先改提示词。
+关键口径：
 
-在 [学习记录](workbook.md) 写下预测和实际结果，并记录一次失败情形。
+- `chat_fn(messages)` 是注入的模型调用；gate 不联网。
+- `content` 缺失、不是字符串或只有空白 -> `CallError("empty_response")`。
+- `response` 不是 dict -> `CallError("bad_response")`。
+- `usage` 缺失 -> token 记 0；token 不是 int 也记 0。
+- `finish_reason` 缺省为 `"stop"`。
+- `call_once` 的 `error` 只能是 `timeout`、`model_error`、`empty_response`、`bad_response` 或 `None`。
 
-## 运行与边界
+## 故障注入（必须亲手触发）
 
-- 会调用真实模型并产生少量费用，需要网络和有效的 `DEEPSEEK_API_KEY`。
-- 一次成功的回复只能证明调用链可通，不能证明答案正确。
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | 空 system / 空 question | `ValueError` |
+| 2 | `chat_fn` 抛 `TimeoutError` | `error="timeout"`，content 为空 |
+| 3 | `chat_fn` 抛 `RuntimeError` | `error="model_error"` |
+| 4 | 返回 `{"content": ""}` | `error="empty_response"` |
+| 5 | 返回 `["not a dict"]` | `error="bad_response"` |
+| 6 | 返回缺 `usage` | token 记 0，不崩 |
+| 7 | 返回 `finish_reason=""` | 缺省为 `"stop"` |
+
+## 验收标准
+
+`gate_check.py` 的 11 项全部 PASS：
+
+- 消息结构、空参数拒绝。
+- 正常响应解析、缺 usage 记 0、非法响应拒绝。
+- 调用成功、空问题、超时、模型异常、空响应、坏结构。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 为什么 `content` 为空要当失败，而不是当“模型不想回答”？
+2. token 缺失时记 0 有什么风险？生产里你会怎么补？
+3. 如果要把 `finish_reason` 用于判断“被截断”，它应该怎么参与业务逻辑？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（11/11）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 1.1
+```
+
+对照时只回答：
+
+1. 参考实现直接 `llm.invoke`，没有处理空 content / 超时；如果上生产，最先补哪一层？
+2. `StrOutputParser` 帮你省掉了哪一步？它有没有丢掉 token 信息？
+3. 参考实现的 system prompt 和本 gate 的 `build_messages` 结构是否一致？
+
+## 概念地图
+
+- **一次往返**：请求（messages）→ 模型 → 响应（content + usage + finish_reason）。
+- **消息角色**：system 定规则，user 提问题；顺序会影响模型行为。
+- **usage**：token 计量，是成本和容量分析的数据源。
+- **可读失败**：上游不可靠时，服务要能降级并留下原因，而不是抛堆栈。
+- **离线替身**：`chat_fn` 注入让 gate 可重复、零费用。
+
+## 边界
+
+- gate 用假模型，不验证真实模型质量；真实调用见参考实现。
+- 通过 gate 只证明请求/响应/失败出口结构正确，不证明回答正确。
+- 认证、限流、成本预算在 L5.1 展开。

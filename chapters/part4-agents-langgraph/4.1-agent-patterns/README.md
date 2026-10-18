@@ -1,73 +1,107 @@
-# 4.1 Agent 模式：先决定控制权放在哪里
+# L4.1 Agent 模式 · Gate（原 4.1）
 
 [全书目录](../../README.md) · [上一章 3.10](../../part3-evals/3.10-eval-report-failures/README.md) · [下一章 4.2](../4.2-langgraph-basics/README.md)
 
-- **目标**：说清固定工作流与动态工具循环的区别，看懂一个有界的 Agent 循环怎样管理状态、失败和终止。
-- **前置**：1.5。
-- **环境**：离线；用脚本化决策器代替模型，图由真实的 LangGraph 执行。
-- **命令**：`python tools/run_chapter.py 4.1`
+- **能力**：区分固定工作流与动态循环；用状态/节点/条件边搭一个有界、失败有出口的 Agent 循环。
+- **v2 路径**：L4.1 / 核心（Gate；Agent 模式）
+- **前置**：1.5（工具调用）。
+- **时间盒**：6 小时（1h 读 + 4h 实现 + 1h 故障分析）。
+- **闭卷规则**：只读本页和 `gate/starter.py`；**通过 gate 之前不要打开** `agent_patterns.py`。
+- **验收命令**：
 
-## 问题
-
-步骤由代码预先确定时是工作流；下一步动作由模型根据运行结果决定时是 Agent，两种方式可以混合（[LangGraph 官方模式说明](https://docs.langchain.com/oss/python/langgraph/workflows-agents)）。选哪一种，先看任务是否需要动态决策。一旦动态，就必须回答：循环怎么停、出错怎么办、什么时候暂停等人。
-
-## 概念
-
-本例用脚本化的决策器代替模型，只观察控制循环，不证明模型能理解任意问题，也不把确定性脚本包装成智能 Agent。
-
-| 边界 | 本例的定义 |
-|---|---|
-| 状态 | `question`、`steps`、`observations`、`decision`、`status`、`error` |
-| `decide` 节点 | 读取状态，请求下一步动作，检查工具白名单和预算 |
-| `tool` 节点 | 校验整数，执行无外部副作用的 `add`，追加观察并把步数加一 |
-| 正常边 | START → decide → tool → decide；`finish` → END |
-| 失败边 | 未知工具、参数错误、超时或预算耗尽 → `failed` → END |
-| 终止条件 | `finish`、失败，或最多 `max_steps` 次工具调用 |
-| 恢复边界 | 可在 `tool` 前暂停，用相同的 `thread_id` 从检查点继续 |
-
-`observations` 每次返回新列表，节点不悄悄修改旧状态。决策器只捕获声明过的 `ValueError` 和 `TimeoutError`，意外的程序错误会向外暴露。
-
-```mermaid
-flowchart LR
-  A[START] --> D[decide]
-  D -->|合法工具且有预算| T[tool]
-  T -->|成功并更新状态| D
-  D -->|finish 或失败| E[END]
-  T -->|参数错误| E
+```bash
+python chapters/part4-agents-langgraph/4.1-agent-patterns/gate/gate_check.py
 ```
 
-本章用到 `StateGraph`、条件边和检查点，它们会在 4.2、4.3、4.10 逐步讲解。现在把它们当作“描述流程图的语言”，读懂每个节点做什么、每条边怎么走即可。
+全部 PASS 才算通过；脚本会写 `gate/gate_report.json`。不允许改 `gate_check.py` 绕过检查。
 
-## 流程
+## 为什么做这个 gate
 
-1. `fixed_workflow`：固定执行一次加法，顺序写死。
-2. `scripted_planner` 首次选择 `add`，看到观察结果后选择 `finish`：正常循环得到 `[5]` 与 `done`。
-3. 一个总是要求 `add` 的决策器，在 2 次工具执行后因预算耗尽得到 `failed`，不会无限循环。
+Agent 不是“让模型随便调工具”。一旦把控制权交给模型，就必须回答：
 
-## 代码导读
+- 循环怎么停？
+- 工具不在白名单怎么办？
+- 参数错/超时/预算耗尽怎么退出？
+- 失败会不会伪装成成功？
+- 状态是覆盖还是追加？
 
-[agent_patterns.py](agent_patterns.py)：按 `State` → `decide` → `tool` → 条件边的顺序阅读。可以先临时返回未知动作，验证工具没有被执行；再传入错误参数，验证失败不会伪装成成功。
+这个 gate 用脚本化决策器代替模型，只验证控制循环本身。
 
-对应的测试：`python -m pytest chapters/test_new_lessons.py -q`。它还用 `InMemorySaver` 演示了暂停与恢复：图停在 `tool` 之前，`invoke(None, config)` 恢复后，结果只出现一次 `5`。
+## 任务
 
-## 模式如何选择
+实现 `gate/starter.py` 的四个函数：
 
-- 固定步骤：先用工作流。
-- 需要动态选择工具：用有界循环（4.5）。
-- 可验证的多步骤任务：计划与执行（4.8）。
-- 独立任务才考虑并行与 Supervisor（4.14）。
+| 函数 | 你要交付的行为 |
+|---|---|
+| `fixed_workflow` | 整数校验 + 加法；bool/非整数报错 |
+| `scripted_planner` | 无观察 -> add；有观察 -> finish |
+| `initial_state` | 完整初始 state |
+| `build_graph` | LangGraph 有界循环：白名单、预算、失败出口 |
 
-增加模式之前，先说明状态怎样汇总、错误怎样传播、什么时候终止，以及付出的延迟和成本。
+关键口径：
 
-## 练习
+- 只允许 `add`；未知工具 -> `status=failed`，error 含“白名单”。
+- `steps >= max_steps` -> `failed`，error 含“预算”。
+- planner 抛 `ValueError/TimeoutError` -> `failed`；意外异常不吞。
+- 工具参数错误 -> `failed`，不追加 observation。
+- 正常路径 -> `status=done`，observations 含结果。
+- `max_steps < 1` -> `ValueError`。
 
-1. 运行正常规划，再让规划器重复要求执行同一个工具，观察步数上限如何终止循环。
-2. 暂停在工具之前，预测恢复后会从哪里继续，再对照测试证据。
-3. 把 `max_steps` 改成 1，预测结果，再运行验证。
+## 故障注入（必须亲手触发）
 
-在 [学习记录](workbook.md) 写明终止原因和测试结果。
+| # | 注入 | 期望 |
+|---|---|---|
+| 1 | `fixed_workflow(2,3)` | 5 |
+| 2 | bool/字符串参数 | `ValueError` |
+| 3 | 正常 planner | done，observations=[5] |
+| 4 | 一直 add，max_steps=2 | failed 预算，steps=2 |
+| 5 | 未知工具 | failed 白名单 |
+| 6 | planner 抛 ValueError | failed 记录原因 |
+| 7 | add 参数是字符串 | failed，无 observation |
+| 8 | max_steps=0 | `ValueError` |
 
-## 运行与边界
+## 验收标准
 
-- 规划器是确定性替身，离线实验只说明控制与恢复机制，不代表真实模型能可靠规划。
-- 内存检查点不跨进程存活；有副作用的工具还需要幂等性和审批，恢复并不保证外部操作自动只执行一次。
+`gate_check.py` 的 8 项全部 PASS：
+
+- 固定工作流、初始状态、正常循环、预算、白名单、planner 异常、参数错误、max_steps 校验。
+
+通过后，在 [workbook.md](workbook.md) 写：
+
+1. 为什么 Agent 循环必须有 `max_steps`？
+2. 失败时为什么不能把 `status` 写成 done？
+3. 哪些错误应该向外暴露，哪些应该转成 failed？
+
+## 提交物
+
+- `gate/starter.py`（实现后的版本）。
+- `gate/gate_report.json`（8/8）。
+- workbook 里的失败分析与三个问题的回答。
+
+## 通过后对照参考实现
+
+不要提前看。通过后再运行并对照：
+
+```bash
+python tools/run_chapter.py 4.1
+```
+
+对照时只回答：
+
+1. 参考实现的 `decide` 节点检查了哪几层？
+2. 参考实现的 `observations` 为什么返回新列表？
+3. 检查点/暂停恢复在本 gate 里没有覆盖，为什么？
+
+## 概念地图
+
+- **工作流 vs Agent**：步骤写死 vs 模型决定下一步。
+- **状态**：question/steps/observations/decision/status/error。
+- **条件边**：按 status 决定去 tool 还是 END。
+- **有界循环**：max_steps + 明确失败出口。
+- **失败不伪装**：参数错误/预算耗尽都写 failed，不写 done。
+
+## 边界
+
+- gate 用脚本化 planner，不验证真实模型规划。
+- 检查点/暂停恢复见参考实现与 4.10。
+- 有副作用工具需要审批/幂等，见 4.8/4.11。

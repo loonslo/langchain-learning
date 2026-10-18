@@ -3,6 +3,7 @@
 [全书目录](../../README.md) · [上一章 1.6](../1.6-mcp-intro/README.md) · [下一章 1.8](../1.8-cli-chatbot/README.md)
 
 - **目标**：用小实验理解 token、embedding、attention 和幻觉，知道模型能力的来源与边界。
+- **v2 路径**：L1.1 / 核心阅读（清单验收）
 - **前置**：1.5。
 - **环境**：需要本地 embedding 模型（见根目录 README“准备本地 embedding 模型”）；不调用聊天模型，不需要密钥。
 - **命令**：`python tools/run_chapter.py 1.7`
